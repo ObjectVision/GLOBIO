@@ -12,8 +12,8 @@ container GLOBIO
 		//STRING LanduseNames =     Urban|Cropland|Forestry|Pasture|Rangeland
 		//STRING LandusePriorityCodes = 1|      10|      30|     21|       22
 
-		attribute<string>  Name:           ['Urban', 'Pasture', 'Cropland', 'Forestry', 'RangeLand', 'other'];
-		attribute<string>  PartioningName: ['Urban', 'Pasture', 'Cropland', 'Forestry', 'RangeLand', 'other'];
+		attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
+		attribute<string>  PartioningName: ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
 		attribute<lu_type> partioning :=     id(lu_type);
 	}
 	
@@ -53,10 +53,9 @@ container GLOBIO
 			{    
 			   attribute<UInt8> GridData;
 			   attribute<UInt8> ReadData(CurrentLanduse/ESA_CCI);
-			   attribute<UInt8> FinalData(CurrentLanduse/ESA_CCI) := ReadData == 0b ? 0b/0b : ReadData;
 			}
 			
-			unit<uint8> meta 
+			unit<uint8> regio 
 			: StorageName = "%SourceDataDir%/GLOBIO/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
 			, StorageType = "gdal.vect"
 			, StorageReadOnly = "True"
@@ -73,6 +72,7 @@ container GLOBIO
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
 			, 	SpatialReference = "Geography/EPSG_4326"
+			,   LazyCalculated = "True"
 			{    
 			   attribute<Float32> GridData;
 			   attribute<Float32> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
@@ -130,6 +130,7 @@ container GLOBIO
 		attribute<Int32> Pasture(world_domain)   := (SourceData/Suitabilities/Pasture/ReadData*1000000.0f)[Int32];
 		attribute<Int32> Cropland(world_domain)  := (SourceData/Suitabilities/Cropland/ReadData*1000000.0f)[Int32];
 		attribute<Int32> Forestry(world_domain)  := (SourceData/Suitabilities/Forestry/ReadData*1000000.0f)[Int32];
+		attribute<Int32> Other(world_domain)     := const(1i, world_domain);
 	}
 	
 	container Claims
@@ -168,53 +169,69 @@ container GLOBIO
 		
 		Container Direct
 		{
-			Attribute<UInt32> Urban (SourceData/Regions/meta) : 
-			[
-			  3638.670166, 90523.59375, 4040.63623, 3365.979004, 8663.470703, 6959.42041, 2738.556641, 3745.357422, 1574.115479, 1732.821899
-			, 65146.80469, 11218.33105, 1439.44519, 5268.691895, 3204.445313, 13798.52051, 4876.30957, 7879.668457, 1013.565735, 27135.78125
-			, 5966.749512, 6566.181641, 7919.617676, 8006.295898, 1923.645752, 1825.350464, 0.0, 0.0 
-			];
+			container Minimum
+			{
+				Attribute<UInt32> Urban := const(0, SourceData/Regions/regio); 
+				Attribute<UInt32> Cropland := const(0, SourceData/Regions/regio); 
+				Attribute<UInt32> Pasture := const(0, SourceData/Regions/regio); 
+				Attribute<UInt32> Rangeland := const(0, SourceData/Regions/regio); 
+				Attribute<UInt32> Forestry := const(0, SourceData/Regions/regio); 
+				Attribute<UInt32> Other := const(0, SourceData/Regions/regio); 
+			}
 			
-			Attribute<UInt32> Cropland (SourceData/Regions/meta) : 
-			[
-			  526403.5, 1881232.5, 194834.9063, 116511.9219, 411472.6563, 505247.0938, 230387.5469, 859946.5625, 392298.7813, 125409.6016
-			, 950546.4375, 563378.6875, 275019.75, 434585.8125, 384235.0, 1391319.0, 290103.875, 1664221.0, 45668.26563, 989361.625
-			, 437636.75, 249525.0938, 57779.60547, 446165.4688, 450059.7813, 226520.6875, 0.0, 0.0 
-			];
-			
-			Attribute<UInt32> Pasture (SourceData/Regions/meta) : 
-			[
-			  160921.6094, 2062331.219, 474419.5625, 124050.6584, 1540666.953, 1847737.156, 243661.1563, 1588978.875, 1311185.375, 443114.9688
-			, 669037.542, 212700.5, 107952.5233, 102981.3255, 420461.75, 762315.8047, 240564.0, 38716.71875, 1267.14209, 2633200.25
-			, 44838.6488, 139781.9968, 8583.033905, 2063806.5, 129788.8125, 1834770.281, 0.0, 0.0 
-			];
-			
-			Attribute<UInt32> Rangeland (SourceData/Regions/meta) : 
-			[
-			  0.0, 341151.2813, 311673.0625, 296.0135193, 2131.421875, 511649.5938, 517090.0938, 912086.125, 652090.0, 387414.5938
-			, 3305.833008, 0.0, 137.2969971, 58.19789886, 1843156.25, 72858.00781, 1758024.625, 74282.52344, 0.0, 1437345.5
-			, 1946.573853, 2565.987549, 331.6116028, 2001798.5, 321017.2813, 298633.2188, 0.0, 0.0 
-			];
-			
-			Attribute<UInt32> Forestry (SourceData/Regions/meta) : 
-			[
-			  37645.22266, 105271.752, 973.4341736, 1307.187836, 5407.049652, 38594.02783, 0.0, 62809.72083, 5771.982666, 1345.26136
-			, 49366.84565, 25522.79785, 12189.57983, 12592.14819, 163.9916992, 121619.4414, 0.0, 11578.47632, 1535.076447, 49373.39081
-			, 18054.65039, 3747.372765, 20682.13834, 7341.843346, 3429.00705, 1618.45631, 0.0, 0.0 
-			];
+			container Maximum
+			{
+				Attribute<UInt32> Urban (SourceData/Regions/regio) : 
+				[
+				  0.0,3638.670166, 90523.59375, 4040.63623, 3365.979004, 8663.470703, 6959.42041, 2738.556641, 3745.357422, 1574.115479, 1732.821899
+				, 65146.80469, 11218.33105, 1439.44519, 5268.691895, 3204.445313, 13798.52051, 4876.30957, 7879.668457, 1013.565735, 27135.78125
+				, 5966.749512, 6566.181641, 7919.617676, 8006.295898, 1923.645752, 1825.350464, 0.0, 0.0 
+				];
+				
+				Attribute<UInt32> Cropland (SourceData/Regions/regio) : 
+				[
+				  0.0,526403.5, 1881232.5, 194834.9063, 116511.9219, 411472.6563, 505247.0938, 230387.5469, 859946.5625, 392298.7813, 125409.6016
+				, 950546.4375, 563378.6875, 275019.75, 434585.8125, 384235.0, 1391319.0, 290103.875, 1664221.0, 45668.26563, 989361.625
+				, 437636.75, 249525.0938, 57779.60547, 446165.4688, 450059.7813, 226520.6875, 0.0, 0.0 
+				];
+				
+				Attribute<UInt32> Pasture (SourceData/Regions/regio) : 
+				[
+				  0.0,160921.6094, 2062331.219, 474419.5625, 124050.6584, 1540666.953, 1847737.156, 243661.1563, 1588978.875, 1311185.375, 443114.9688
+				, 669037.542, 212700.5, 107952.5233, 102981.3255, 420461.75, 762315.8047, 240564.0, 38716.71875, 1267.14209, 2633200.25
+				, 44838.6488, 139781.9968, 8583.033905, 2063806.5, 129788.8125, 1834770.281, 0.0, 0.0 
+				];
+				
+				Attribute<UInt32> Rangeland (SourceData/Regions/regio) : 
+				[
+				  0.0,0.0, 341151.2813, 311673.0625, 296.0135193, 2131.421875, 511649.5938, 517090.0938, 912086.125, 652090.0, 387414.5938
+				, 3305.833008, 0.0, 137.2969971, 58.19789886, 1843156.25, 72858.00781, 1758024.625, 74282.52344, 0.0, 1437345.5
+				, 1946.573853, 2565.987549, 331.6116028, 2001798.5, 321017.2813, 298633.2188, 0.0, 0.0 
+				];
+				
+				Attribute<UInt32> Forestry (SourceData/Regions/regio) : 
+				[
+				  0.0,37645.22266, 105271.752, 973.4341736, 1307.187836, 5407.049652, 38594.02783, 0.0, 62809.72083, 5771.982666, 1345.26136
+				, 49366.84565, 25522.79785, 12189.57983, 12592.14819, 163.9916992, 121619.4414, 0.0, 11578.47632, 1535.076447, 49373.39081
+				, 18054.65039, 3747.372765, 20682.13834, 7341.843346, 3429.00705, 1618.45631, 0.0, 0.0 
+				];
+				
+				Attribute<UInt32> Other (SourceData/Regions/regio) := pcount(Compacted/regio_rel);
+			}
 		}
 	}
 	
 	container RegionSets
 	{
-		attribute<SourceData/Regions/meta> Urban     (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/meta];
-		attribute<SourceData/Regions/meta> Pasture   (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/meta];
-		attribute<SourceData/Regions/meta> Cropland  (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/meta];
-		attribute<SourceData/Regions/meta> Forestry  (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/meta];
-		attribute<SourceData/Regions/meta> Rangeland (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/meta];
+		attribute<SourceData/Regions/regio> Urban     (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/regio];
+		attribute<SourceData/Regions/regio> Pasture   (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/regio];
+		attribute<SourceData/Regions/regio> Cropland  (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/regio];
+		attribute<SourceData/Regions/regio> Forestry  (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/regio];
+		attribute<SourceData/Regions/regio> Rangeland (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/regio];
+		attribute<SourceData/Regions/regio> Other     (world_domain) := SourceData/Regions/IMAGE/FinalData[SourceData/Regions/regio];
 	}
 	
-    unit<uint16> AtomicRegions := overlay(lu_type/PartioningName, world_domain, RegionSets);
+    unit<uint8> AtomicRegions := SourceData/Regions/regio; //overlay(lu_type/PartioningName, world_domain, RegionSets);
 	
 	container Compacted
 	{
@@ -229,17 +246,131 @@ container GLOBIO
 			attribute<Int32> Cropland(alloc_domain)  := collect_by_cond(alloc_domain, compact_condition, Suitabilities/Cropland);
 			attribute<Int32> Forestry(alloc_domain)  := collect_by_cond(alloc_domain, compact_condition, Suitabilities/Forestry);
 			attribute<Int32> RangeLand(alloc_domain) := Pasture;
+			attribute<Int32> Other(alloc_domain)     := collect_by_cond(alloc_domain, compact_condition, Suitabilities/Other);
 		}
-		attribute<AtomicRegions> AtomicRegionMap(alloc_domain) := collect_by_cond(alloc_domain, compact_condition, AtomicRegions/UnionData);
+		
+		attribute<SourceData/Regions/regio> regio_rel (alloc_domain) := collect_by_cond(alloc_domain, compact_condition, SourceData/Regions/IMAGE/ReadData);
 	}
 	
 	container FeasibleSolution;
+	
+	container Templates
+	{
+		Template AllocateLanduse
+		{
+			// params
+			
+			
+			
+			unit<uint8> AtomicRegions := SourceData/Regions/regio
+			{
+				attribute<.> regio := id(.);
+			}
+			
+			container SuitabilityMaps
+			{
+				attribute<int32> alloc(alloc_domain) := collect_by_cond(alloc_domain, Compacted/compact_condition, Suitabilities/Urban);
+				attribute<int32> other(alloc_domain) := collect_by_cond(alloc_domain, Compacted/compact_condition, Suitabilities/Other);
+			}
+			
+			container Claims
+			{
+				container Minimum
+				{
+					Attribute<UInt32> alloc (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
+					Attribute<UInt32> other (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
+				}
+				
+				container Maximum
+				{
+					Attribute<UInt32> alloc (SourceData/Regions/regio) := /Claims/Direct/Maximum/Urban;
+					Attribute<UInt32> other (SourceData/Regions/regio) := /Claims/Direct/Maximum/Other;
+				}
+			}
+			
+			container allocate_step := 
+			discrete_alloc(
+			Allocation/allocate_stepwise/lu_type/name
+			,Compacted/alloc_domain
+			,Urban/SuitabilityMaps
+			,lu_type/partioning_rel
+			,partitioning/Name
+			,Urban/AtomicRegions
+			,Compacted/regio_rel
+			,Urban/Claims/Minimum
+			,Urban/Claims/Maximum
+			,0i
+			,FeasibleSolution
+			)
+			{
+				attribute<lu_type> alloc (world_domain) := landuse[Compacted/BaseGrid];
+			}
+		}
+	}
 	
 	container Allocation
 	{
 		container allocate_stepwise
 		{
-						
+			unit<uint32> alloc_domain := Compacted/alloc_domain;
+			
+			unit <uint8> partitioning: nrofrows = 1
+			{
+				attribute<String> Name : ['regio'];
+			}
+			
+			unit <uint8> lu_type: nrofrows = 2
+			{
+				attribute<string>  Name:           ['alloc', 'other'];
+				attribute<partitioning> partioning_rel := const(0[partitioning], lu_type);
+			}
+
+			container Urban
+			{
+				unit<uint8> AtomicRegions := SourceData/Regions/regio
+				{
+					attribute<.> regio := id(.);
+				}
+				
+				container SuitabilityMaps
+				{
+					attribute<int32> alloc(alloc_domain) := collect_by_cond(alloc_domain, Compacted/compact_condition, Suitabilities/Urban);
+					attribute<int32> other(alloc_domain) := collect_by_cond(alloc_domain, Compacted/compact_condition, Suitabilities/Other);
+				}
+				
+				container Claims
+				{
+					container Minimum
+					{
+						Attribute<UInt32> alloc (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
+						Attribute<UInt32> other (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
+					}
+					
+					container Maximum
+					{
+						Attribute<UInt32> alloc (SourceData/Regions/regio) := /Claims/Direct/Maximum/Urban;
+						Attribute<UInt32> other (SourceData/Regions/regio) := /Claims/Direct/Maximum/Other;
+					}
+				}
+				
+				container allocate_step := 
+				discrete_alloc(
+				Allocation/allocate_stepwise/lu_type/name
+				,Compacted/alloc_domain
+				,Urban/SuitabilityMaps
+				,lu_type/partioning_rel
+				,partitioning/Name
+				,Urban/AtomicRegions
+				,Compacted/regio_rel
+				,Urban/Claims/Minimum
+				,Urban/Claims/Maximum
+				,0i
+				,FeasibleSolution
+				)
+				{
+					attribute<lu_type> alloc (world_domain) := landuse[Compacted/BaseGrid];
+				}
+			}
 		}
 		
 		container allocate_discrete := 

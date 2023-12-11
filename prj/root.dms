@@ -9,6 +9,15 @@ container GLOBIO
 	
 	unit<upoint> world_domain := SourceData/CurrentLanduse/ESA_CCI;
 	
+	container LandUseTypes
+	{
+		unit <uint8> types: nrofrows = 6
+		{
+			attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
+			attribute<string>  NameWithClaims: ['Urban', 'Cropland', 'Pasture', 'Rangeland', 'Forestry'];
+			attribute<partitioning> partioning_rel := const(0[partitioning], types);
+		}
+	}
 	
 	container Geography
 	{
@@ -32,6 +41,22 @@ container GLOBIO
 			}
 		}
 		
+		container Area
+		{
+			unit<upoint> Area_km2
+			: 	StorageName = "%SourceDataDir%/GLOBIO/input/areakm2_10sec.tif" 
+			,   StorageType = "gdal.grid" 
+			,   DialogData  = "Geography/EPSG_4326" 
+			,   DialogType  = "Map"
+			, 	SpatialReference = "Geography/EPSG_4326"
+			,   StorageReadOnly = "True"
+			,   LazyCalculated = "True"
+			{
+			   attribute<Float32> GridData;
+			   attribute<Float32> ReadData(CurrentLanduse/ESA_CCI);
+			}
+		}
+		
 		container Regions
 		{
 			unit<upoint> IMAGE
@@ -42,8 +67,8 @@ container GLOBIO
 			, 	SpatialReference = "Geography/EPSG_4326"
 			,   StorageReadOnly = "True"
 			{    
-			   attribute<UInt8> GridData;
-			   attribute<UInt8> ReadData(CurrentLanduse/ESA_CCI);
+			   attribute<regio> GridData;
+			   attribute<regio> ReadData(CurrentLanduse/ESA_CCI);
 			}
 			
 			parameter<string> underscore := '_';
@@ -54,22 +79,22 @@ container GLOBIO
 			, StorageReadOnly = "True"
 			{
 				attribute<UInt8>     Code          := UInt8(Nr);
-				attribute<string>    keyUrban      := string(id(.)) + '_Urban';
+				//attribute<string>    keyUrban      := string(id(.)) + '_Urban';
 				attribute<string>    keyString     := string(id(.));
 				
-				attribute<units/km2> MaxClaimUrban := rjoin(string(id(.)) + '_Urban', Claims/ClaimTable/key, Claims/ClaimTable/Claim);
+				//attribute<units/km2> MaxClaimUrban := rjoin(string(id(.)) + '_Urban', Claims/ClaimTable/key, Claims/ClaimTable/Claim);
 				
 				
 				container keyLandUseType := for_each_nedv(
-					Allocation/allocate_discrete/lu_type/name 
-					, 'keyString + underscore +' + quote(Allocation/allocate_discrete/lu_type/name)
+					LandUseTypes/types/NameWithClaims 
+					, 'keyString + underscore +' + quote(LandUseTypes/types/NameWithClaims)
 					, regio
 					, string
 					);
 				
 				container MaxClaims := for_each_nedv(
-					Allocation/allocate_discrete/lu_type/name 
-					,'rjoin(keyLandUseType/' + Allocation/allocate_discrete/lu_type/name + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+					LandUseTypes/types/NameWithClaims 
+					,'rjoin(keyLandUseType/' + LandUseTypes/types/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
 					, regio
 					, units/km2
 				);
@@ -156,17 +181,53 @@ container GLOBIO
 	
 	container Claims
 	{
-		unit<UInt8> ClaimTable
+		unit<uint8> ClaimTable
 		:   StorageName = "%SourceDataDir%/GLOBIO/input/Claim1970.csv" 
 		,   StorageType = "gdal.vect"
 		,   StorageReadOnly = "True"
 		{
-			Attribute<UInt8>   Region;
-			Attribute<String>  Class := Attribute;
-			Attribute<units/km2> Claim := Value[units/km2];
-			
-			Attribute<string> key := String(Region) + '_' + Class;
+			attribute<uint8>     Region;
+			attribute<string>    Class   := Attribute;
+			attribute<units/km2> Claim   := Value[units/km2];
+			attribute<string>    key     := String(Region) + '_' + Class;
 		}
+		
+		attribute<float32> scale_factors (SourceData/Regions/regio) := mean(SourceData/area/Area_km2/ReadData, SourceData/Regions/IMAGE/ReadData);
+		
+		container test
+		{
+			parameter<string> underscore := '_';
+			attribute<string>    keyString (SourceData/Regions/regio) := string(id(SourceData/Regions/regio));
+
+			container keyLandUseType := for_each_nedv(
+			LandUseTypes/types/NameWithClaims 
+				, 'keyString + underscore +' + quote(LandUseTypes/types/NameWithClaims)
+				, SourceData/Regions/regio
+				, string
+			);
+
+			container MaxClaims := for_each_nedv(
+			LandUseTypes/types/NameWithClaims 
+				,'rjoin(keyLandUseType/' + LandUseTypes/types/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+				, SourceData/Regions/regio
+				, units/km2
+			)
+			{
+				attribute<uint32> Other (SourceData/Regions/regio) := pcount(Compacted/regio_rel);
+			}
+			
+			container MaxClaimsScaled := for_each_nedv(
+				  LandUseTypes/types/NameWithClaims
+				, 'UInt32(MaxClaims/' + LandUseTypes/types/NameWithClaims  + '/ scale_factors[units/km2])'
+				, SourceData/Regions/regio
+				, uint32
+			
+			)
+			{
+				attribute<uint32> Other (SourceData/Regions/regio) := MaxClaims/Other;
+			}
+			
+		}		
 		
 		Container Direct
 		{
@@ -289,8 +350,8 @@ container GLOBIO
 				
 				container Maximum
 				{
-					Attribute<UInt32> alloc (SourceData/Regions/regio) :== '/Claims/Direct/Maximum/' + landuse_name;
-					Attribute<UInt32> other (SourceData/Regions/regio) := /Claims/Direct/Maximum/Other;
+					Attribute<UInt32> alloc (SourceData/Regions/regio) :== 'Claims/test/MaxClaimsScaled/' + landuse_name;
+					Attribute<UInt32> other (SourceData/Regions/regio) :=   Claims/test/MaxClaimsScaled/Other; ///Claims/Direct/Maximum/Other;
 				}
 			}
 			
@@ -356,20 +417,12 @@ container GLOBIO
 		
 		container allocate_discrete
 		{
-			
-			unit <uint8> lu_type: nrofrows = 6
-			{
-				attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
-				attribute<partitioning> partioning_rel := const(0[partitioning], lu_type);
-			}
-			
-			
 			container allocate := 
 			discrete_alloc(
-			lu_type/name
+			LandUseTypes/types/name
 			,Compacted/alloc_domain
 			,Compacted/SuitabilityMaps
-			,Allocation/allocate_discrete/lu_type/partioning_rel
+			,LandUseTypes/types/partioning_rel
 			,Allocation/partitioning/Name
 			,Allocation/AtomicRegions
 			,Compacted/regio_rel
@@ -379,7 +432,7 @@ container GLOBIO
 			,FeasibleSolution
 			)
 			{
-				attribute<Allocation/allocate_discrete/lu_type> alloc(world_domain) := landuse[Compacted/BaseGrid];
+				attribute<LandUseTypes/types> alloc(world_domain) := landuse[Compacted/BaseGrid];
 			}
 		}
 	}

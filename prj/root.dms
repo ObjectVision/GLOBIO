@@ -1,5 +1,8 @@
 container GLOBIO
 {
+	container ConfigSettings { container Overridable {
+		parameter<String> GlobioSourceDataDir:= '%SourceDataDir%/GLOBIO';
+	}}
 	container parameters
 	{
 		parameter<bool> use_zeroed_initial_alloc_grid := True;
@@ -35,7 +38,7 @@ container GLOBIO
 		container CurrentLanduse
 		{
 			unit<upoint> ESA_CCI
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/ESACCI_GLOBIO_1992_water1992-2015.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -49,7 +52,7 @@ container GLOBIO
 		container Area
 		{
 			unit<upoint> Area_km2
-			: 	StorageName = "%SourceDataDir%/GLOBIO/input/areakm2_10sec.tif" 
+			: 	StorageName = "%GlobioSourceDataDir%/input/areakm2_10sec.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -62,7 +65,7 @@ container GLOBIO
 			}
 			
 			unit<upoint> Protected_areas
-			: 	StorageName = "%SourceDataDir%/GLOBIO/input/pa_reduce_factor_wdpa_2018_july.tif" 
+			: 	StorageName = "%GlobioSourceDataDir%/input/pa_reduce_factor_wdpa_2018_july.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -78,7 +81,7 @@ container GLOBIO
 		container Regions
 		{
 			unit<upoint> IMAGE
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
+			:   StorageName = "%GlobioSourceDataDir%/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -92,7 +95,7 @@ container GLOBIO
 			parameter<string> underscore := '_';
 			
 			unit<uint8> regio 
-			: StorageName = "%SourceDataDir%/GLOBIO/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
+			: StorageName = "%GlobioSourceDataDir%/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
 			, StorageType = "gdal.vect"
 			, StorageReadOnly = "True"
 			{
@@ -122,7 +125,7 @@ container GLOBIO
 		container Suitabilities
 		{
 			unit<upoint> Urban
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/suit_urban.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -134,7 +137,7 @@ container GLOBIO
 			}
 			
 			unit<upoint> Pasture
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/suit_pasture_lu_diff_no_wtr.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -145,7 +148,7 @@ container GLOBIO
 			}
 			
 			unit<upoint> Cropland
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -156,7 +159,7 @@ container GLOBIO
 			}
 			
 			unit<upoint> Forestry
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/suit_forestry_2015.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
@@ -167,7 +170,7 @@ container GLOBIO
 			}
 			
 			unit<upoint> NotAllocatable
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/not_allocatable_ESA-CCI_1992-2015.tif"
+			:   StorageName = "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif"
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
 			//,   StorageType = "gdal.grid"
@@ -178,7 +181,7 @@ container GLOBIO
 			}
 			
 			unit<upoint> NotAllocatable1
-			:   StorageName = "%SourceDataDir%/GLOBIO/input/not_allocatable_ESA-CCI_1992-2015.tif"
+			:   StorageName = "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif"
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
 			//,   StorageType = "gdal.grid"
@@ -200,7 +203,7 @@ container GLOBIO
 	container Claims
 	{
 		unit<uint8> ClaimTable
-		:   StorageName = "%SourceDataDir%/GLOBIO/input/Claim1970.csv" 
+		:   StorageName = "%GlobioSourceDataDir%/input/Claim1970.csv" 
 		,   StorageType = "gdal.vect"
 		,   StorageReadOnly = "True"
 		{
@@ -389,7 +392,7 @@ container GLOBIO
 		parameter<string> generate := "Ok", ExplicitSuppliers='allocated_landuse_stepped/GridData';
 		
 		unit<upoint> allocated_landuse_stepped := world_domain
-		, StorageName       = "%SourceDataDir%/GLOBIO/output/geodms_stepped_allocation.tif" 
+		, StorageName       = "%GlobioSourceDataDir%/output/geodms_stepped_allocation.tif" 
 		, StorageType       = "gdalwrite.grid"
 		, DialogData        = "Geography/EPSG_4326"
 		, DialogType        = "Map"
@@ -401,7 +404,7 @@ container GLOBIO
 		}
 		
 		unit<upoint> allocated_landuse_discrete := world_domain
-		, StorageName = "%SourceDataDir%/GLOBIO/output/geodms_discrete_allocation.tif"
+		, StorageName = "%GlobioSourceDataDir%/output/geodms_discrete_allocation.tif"
 		, StorageType = "tif" //"gdalwrite.grid"
 		, StorageReadOnly = "False"
 		{
@@ -414,7 +417,7 @@ container GLOBIO
 		container reference
 		{
 			unit<upoint> globio_world
-			: StorageName = "%SourceDataDir%/GLOBIO/output/world/Globio4_landuse_10sec_1970_World.tif" 
+			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World.tif" 
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
 			, DialogType        = "Map"
@@ -428,7 +431,7 @@ container GLOBIO
 		container stepped
 		{
 			unit<upoint> dms_world := SourceData/CurrentLanduse/ESA_CCI
-			, StorageName = "%SourceDataDir%/GLOBIO/output/geodms_stepped_allocation.tif" 
+			, StorageName = "%GlobioSourceDataDir%/output/geodms_stepped_allocation.tif" 
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
 			, DialogType        = "Map"
@@ -445,7 +448,7 @@ container GLOBIO
 		container indicators 
 		{
 			unit<uint8> Urban := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_urban.csv" 
+				, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_urban.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -456,7 +459,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Cropland := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_cropland.csv" 
+				, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_cropland.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -467,7 +470,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Forestry := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_forestry.csv" 
+				, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_forestry.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -478,7 +481,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Pasture := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_pasture.csv" 
+				, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_pasture.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -489,7 +492,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Rangeland := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_rangeland.csv" 
+				, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_rangeland.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{

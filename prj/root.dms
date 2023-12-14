@@ -456,7 +456,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Cropland := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_urban.csv" 
+			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_cropland.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -467,7 +467,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Forestry := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_urban.csv" 
+			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_forestry.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -478,7 +478,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Pasture := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_urban.csv" 
+			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_pasture.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
@@ -489,7 +489,7 @@ container GLOBIO
 			}
 			
 			unit<uint8> Rangeland := SourceData/Regions/regio
-			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_urban.csv" 
+			, StorageName = "%SourceDataDir%/GLOBIO/output/alloc_differences_rangeland.csv" 
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{

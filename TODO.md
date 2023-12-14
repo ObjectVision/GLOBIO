@@ -1,0 +1,3 @@
+- Check claim for rangeland
+- Check / fix suitability for rangeland
+- Disable filling of map

@@ -119,6 +119,7 @@ container GLOBIO
 					, regio
 					, units/km2
 				);
+				attribute<string> Label := Countries, DialogType = "LabelText";
 			}	
 		}
 		
@@ -214,6 +215,10 @@ container GLOBIO
 		}
 		
 		attribute<float32> scale_factors (SourceData/Regions/regio) := mean(SourceData/area/Area_km2/ReadData, SourceData/Regions/IMAGE/ReadData);
+		attribute<float64> sf_f64        (SourceData/Regions/regio) := mean(Float64(SourceData/area/Area_km2/ReadData), SourceData/Regions/IMAGE/ReadData);
+		attribute<float32> sf_inv        (SourceData/Regions/regio) := 1f / scale_factors;
+		attribute<float32> sf_Harmonic   (SourceData/Regions/regio) := mean(1f / SourceData/area/Area_km2/ReadData, SourceData/Regions/IMAGE/ReadData);
+		
 		
 		container test
 		{
@@ -227,14 +232,13 @@ container GLOBIO
 				, string
 			);
 
-			container MaxClaims := for_each_nedv(
-			LandUseTypes/types/NameWithClaims 
+			container MaxClaims := for_each_nedv(LandUseTypes/types/NameWithClaims 
 				,'rjoin(keyLandUseType/' + LandUseTypes/types/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
 				, SourceData/Regions/regio
 				, units/km2
 			)
 			{
-				attribute<uint32> Other (SourceData/Regions/regio) := pcount(Compacted/regio_rel);
+				attribute<uint32> Other (SourceData/Regions/regio) := const(#Compacted/alloc_domain, SourceData/Regions/regio);
 			}
 			
 			container MaxClaimsScaled := for_each_nedv(
@@ -300,14 +304,14 @@ container GLOBIO
 			{
 				container Minimum
 				{
-					Attribute<UInt32> alloc (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
+					Attribute<UInt32> alloc (SourceData/Regions/regio) :== 'Claims/test/MaxClaimsScaled/' + landuse_name;
 					Attribute<UInt32> other (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
 				}
 				
 				container Maximum
 				{
 					Attribute<UInt32> alloc (SourceData/Regions/regio) :== 'Claims/test/MaxClaimsScaled/' + landuse_name;
-					Attribute<UInt32> other (SourceData/Regions/regio) :=   Claims/test/MaxClaimsScaled/Other; ///Claims/Direct/Maximum/Other;
+					Attribute<UInt32> other (SourceData/Regions/regio) :=   Claims/test/MaxClaimsScaled/Other;
 				}
 			}
 			
@@ -417,7 +421,7 @@ container GLOBIO
 		container reference
 		{
 			unit<upoint> globio_world
-			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World.tif" 
+			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled.tif" 
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
 			, DialogType        = "Map"

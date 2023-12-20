@@ -317,7 +317,7 @@ container GLOBIO
 			container SuitabilityMaps
 			{
 				attribute<int32> alloc(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : 0i';
-				attribute<int32> other(alloc_domain) := const(oi, alloc_domain);
+				attribute<int32> other(alloc_domain) := const(0i, alloc_domain);
 			}
 			
 			container SteppedClaims

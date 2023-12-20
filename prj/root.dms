@@ -456,8 +456,8 @@ container GLOBIO
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
-				attribute<uint32> globio_num_urban_cells := sum_uint32(uint8(reference/globio_world/ReadData==1b), SourceData/Regions/IMAGE/ReadData);
-				attribute<uint32> dms_num_urban_cells    := sum_uint32(uint8(stepped/dms_world/GridData==1b), SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==1b, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> dms_num_urban_cells    := sum_uint32(stepped/dms_world/GridData==1b, SourceData/Regions/IMAGE/ReadData);
 				attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
 				attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
 			}
@@ -467,8 +467,8 @@ container GLOBIO
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
-				attribute<uint32> globio_num_urban_cells := sum_uint32(uint8(reference/globio_world/ReadData==10b), SourceData/Regions/IMAGE/ReadData);
-				attribute<uint32> dms_num_urban_cells    := sum_uint32(uint8(stepped/dms_world/GridData==10b), SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==10b, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> dms_num_urban_cells    := sum_uint32(stepped/dms_world/GridData==10b, SourceData/Regions/IMAGE/ReadData);
 				attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
 				attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
 			}
@@ -478,8 +478,8 @@ container GLOBIO
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
-				attribute<uint32> globio_num_urban_cells := sum_uint32(uint8(reference/globio_world/ReadData==30b), SourceData/Regions/IMAGE/ReadData);
-				attribute<uint32> dms_num_urban_cells    := sum_uint32(uint8(stepped/dms_world/GridData==30b), SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==30b, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> dms_num_urban_cells    := sum_uint32(stepped/dms_world/GridData==30b, SourceData/Regions/IMAGE/ReadData);
 				attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
 				attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
 			}
@@ -489,8 +489,8 @@ container GLOBIO
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
-				attribute<uint32> globio_num_urban_cells := sum_uint32(uint8(reference/globio_world/ReadData==21b), SourceData/Regions/IMAGE/ReadData);
-				attribute<uint32> dms_num_urban_cells    := sum_uint32(uint8(stepped/dms_world/GridData==21b), SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==21b, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> dms_num_urban_cells    := sum_uint32(stepped/dms_world/GridData==21b, SourceData/Regions/IMAGE/ReadData);
 				attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
 				attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
 			}
@@ -500,8 +500,8 @@ container GLOBIO
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
-				attribute<uint32> globio_num_urban_cells := sum_uint32(uint8(reference/globio_world/ReadData==22b), SourceData/Regions/IMAGE/ReadData);
-				attribute<uint32> dms_num_urban_cells    := sum_uint32(uint8(stepped/dms_world/GridData==22b), SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==22b, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> dms_num_urban_cells    := sum_uint32(stepped/dms_world/GridData==22b, SourceData/Regions/IMAGE/ReadData);
 				attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
 				attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
 			}

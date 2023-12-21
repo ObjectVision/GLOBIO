@@ -289,17 +289,18 @@ container GLOBIO
 			attribute<uint8>  alloc_grid (alloc_domain);
 			// end case parameters
 			
-			attribute<Bool> suitability_augmentation_mask (alloc_domain) := alloc_grid == 0b;
-
+			attribute<Bool> suitability_augmentation_mask_calc (alloc_domain) := alloc_grid == 0b;
+			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
+			
 			attribute<int32> SuitabilityMap(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : 0i';
 			
 			Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/test/MaxClaims/' + landuse_name;
 				
-			attribute<int32> zaaglijn_calc(SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
-			attribute<int32> zaaglijn(SourceData/Regions/regio) := FenceContainer(zaaglijn_calc, 'zaag '+landuse_name);
+			attribute<int32> zaaglijn(SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
 			
 			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
 		}
+		
 		Template AllocateSteppedLanduse
 		{
 			// begin case parameters
@@ -308,8 +309,9 @@ container GLOBIO
 			attribute<uint8>  alloc_grid (alloc_domain);
 			// end case parameters
 			
-			attribute<Bool> suitability_augmentation_mask (alloc_domain) := alloc_grid == 0b;
-
+			attribute<Bool> suitability_augmentation_mask_calc (alloc_domain) := alloc_grid == 0b;
+			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
+			
 			unit<uint8> AtomicRegions := SourceData/Regions/regio
 			{
 				attribute<.> regio := id(.);
@@ -354,7 +356,8 @@ container GLOBIO
 				attribute<Allocation/allocate_stepwise/lu_type> alloc(world_domain) := landuse[Compacted/BaseGrid];
 			}
 			
-			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (allocate_step/landuse==0b) ? landuse_code : alloc_grid;
+			container fenced_allocate_step := FenceContainer(allocate_step, 'allocate stepped ' + landuse_name );
+			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (fenced_allocate_step/landuse==0b) ? landuse_code : alloc_grid;
 		}
 	}
 	
@@ -399,13 +402,13 @@ container GLOBIO
 			}
 			
 			attribute<uint8> initial_alloc_grid (alloc_domain) := parameters/use_zeroed_initial_alloc_grid ? const(0b, alloc_domain) : Compacted/alloc_grid;
-			container Urban_t     := Templates/AllocateSteppedLanduse("Urban",      1b, initial_alloc_grid);
-			container Cropland_t  := Templates/AllocateSteppedLanduse("Cropland",  10b, Urban_t/adjusted_alloc_grid);
-			container Forestry_t  := Templates/AllocateSteppedLanduse("Forestry",  30b, Cropland_t/adjusted_alloc_grid);
-			container Pasture_t   := Templates/AllocateSteppedLanduse("Pasture",   21b, Forestry_t/adjusted_alloc_grid);
-			container Rangeland_t := Templates/AllocateSteppedLanduse("Rangeland", 22b, Pasture_t/adjusted_alloc_grid);
+			container Urban     := Templates/AllocateSteppedLanduse("Urban",      1b, initial_alloc_grid);
+			container Cropland  := Templates/AllocateSteppedLanduse("Cropland",  10b, Urban/adjusted_alloc_grid);
+			container Forestry  := Templates/AllocateSteppedLanduse("Forestry",  30b, Cropland/adjusted_alloc_grid);
+			container Pasture   := Templates/AllocateSteppedLanduse("Pasture",   21b, Forestry/adjusted_alloc_grid);
+			container Rangeland := Templates/AllocateSteppedLanduse("Rangeland", 22b, Pasture/adjusted_alloc_grid);
 
-			attribute<uint8> landuse (world_domain) := Rangeland_t/adjusted_alloc_grid[Compacted/BaseGrid];
+			attribute<uint8> landuse (world_domain) := Rangeland/adjusted_alloc_grid[Compacted/BaseGrid];
 		}
 		
 		container allocate_discrete

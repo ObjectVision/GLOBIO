@@ -296,23 +296,30 @@ container GLOBIO
 			attribute<Bool> suitability_augmentation_mask (alloc_domain) := alloc_grid == 0b;
 //			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
 			
-			attribute<int32> SuitabilityMap(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : -1i';
+			attribute<int32> SuitabilityMap(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : -1i', LazyCalculated = "True";
+			
+			attribute<int64> Rank_1(alloc_domain) := int64(SuitabilityMap), LazyCalculated = "True";
+			attribute<int64> Rank_2(alloc_domain) := Rank_1 * int64(#alloc_domain), LazyCalculated = "True";
+			attribute<int64> Rank_3(alloc_domain) := int64(id(alloc_domain)), LazyCalculated = "True";
+			attribute<int64> Rank_4(alloc_domain) := Rank_2 + Rank_3, LazyCalculated = "True";
+			
+			attribute<int64> Rank(alloc_domain) := - Rank_4, LazyCalculated = "True";
 			
 			Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/test/MaxClaims/' + landuse_name;
 				
-			attribute<int32> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
-			attribute<int32> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i);
+			attribute<int64> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, AreaClaim, Compacted/Area, Compacted/regio_rel);
+			attribute<int64> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i64), KeepData = "True";
 			
 			container fc_impl {
-				attribute<uint8>   adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
+				attribute<uint8>   adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] >= Rank) ? landuse_code : alloc_grid, LazyCalculated = "True";
 				attribute<uint32>  sum_per_regio (SourceData/Regions/regio) := sum_uint32(adjusted_alloc_grid==landuse_code, Compacted/regio_rel);
-				attribute<units/km2> area_allocated (alloc_domain) := adjusted_alloc_grid==landuse_code ? Compacted/area : 0[units/km2];
-				attribute<units/km2> area_allocated_globio (alloc_domain) := Evaluate/Reference/globio_results_compacted==landuse_code ? Compacted/area : 0[units/km2]; 
+				attribute<units/km2> area_allocated (alloc_domain) := adjusted_alloc_grid==landuse_code ? Compacted/area : 0[units/km2], LazyCalculated = "True";
+//				attribute<units/km2> area_allocated_globio (alloc_domain) := Evaluate/Reference/globio_results_compacted==landuse_code ? Compacted/area : 0[units/km2]; 
 				
 				attribute<float32> sum_area_per_regio_dms (SourceData/Regions/regio) := sum(area_allocated, Compacted/regio_rel);
-				attribute<float32> sum_area_per_regio_globio (SourceData/Regions/regio) := sum(area_allocated_globio, Compacted/regio_rel);
+//				attribute<float32> sum_area_per_regio_globio (SourceData/Regions/regio) := sum(area_allocated_globio, Compacted/regio_rel);
 			}
-			container fc := FenceContainer(fc_impl, 'aag '+landuse_name);
+			container fc := fc_impl; // FenceContainer(fc_impl, 'aag '+landuse_name);
 			attribute<uint8> adjusted_alloc_grid (alloc_domain) := fc/adjusted_alloc_grid;
 		}
 		

@@ -238,7 +238,7 @@ container GLOBIO
 				, units/km2
 			)
 			{
-				attribute<uint32> Other (SourceData/Regions/regio) := 4000000000;
+				attribute<uint32> Other (SourceData/Regions/regio) := const(4000000000, SourceData/Regions/regio);
 			}
 			
 			container MaxClaimsScaled := for_each_nedv(

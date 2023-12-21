@@ -259,6 +259,7 @@ container GLOBIO
 		attribute<uint8> alloc_grid (alloc_domain) := collect_by_cond(alloc_domain, compact_condition, SourceData/CurrentLanduse/ESA_CCI/GridData);
 
 		attribute<units/km2> area(alloc_domain)  := collect_by_cond(alloc_domain, compact_condition, SourceData/area/Area_km2/ReadData)[units/km2];
+		
 		attribute<Float32> Protected_areas_compacted (alloc_domain) := collect_by_cond(alloc_domain, compact_condition, SourceData/Area/Protected_areas/ReadData);
 		container SuitabilityMaps
 		{
@@ -295,14 +296,21 @@ container GLOBIO
 			attribute<Bool> suitability_augmentation_mask (alloc_domain) := alloc_grid == 0b;
 //			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
 			
-			attribute<int32> SuitabilityMap(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : 0i';
+			attribute<int32> SuitabilityMap(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : -1i';
 			
 			Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/test/MaxClaims/' + landuse_name;
 				
-			attribute<int32> zaaglijn(SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
+			attribute<int32> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
+			attribute<int32> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i);
 			
 			container fc_impl {
-				attribute<uint8> adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
+				attribute<uint8>   adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
+				attribute<uint32>  sum_per_regio (SourceData/Regions/regio) := sum_uint32(adjusted_alloc_grid==landuse_code, Compacted/regio_rel);
+				attribute<units/km2> area_allocated (alloc_domain) := adjusted_alloc_grid==landuse_code ? Compacted/area : 0[units/km2];
+				attribute<units/km2> area_allocated_globio (alloc_domain) := Evaluate/Reference/globio_results_compacted==landuse_code ? Compacted/area : 0[units/km2]; 
+				
+				attribute<float32> sum_area_per_regio_dms (SourceData/Regions/regio) := sum(area_allocated, Compacted/regio_rel);
+				attribute<float32> sum_area_per_regio_globio (SourceData/Regions/regio) := sum(area_allocated_globio, Compacted/regio_rel);
 			}
 			container fc := FenceContainer(fc_impl, 'aag '+landuse_name);
 			attribute<uint8> adjusted_alloc_grid (alloc_domain) := fc/adjusted_alloc_grid;
@@ -326,7 +334,7 @@ container GLOBIO
 			
 			container SuitabilityMaps
 			{
-				attribute<int32> alloc(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : 0i';
+				attribute<int32> alloc(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : -1i';
 				attribute<int32> other(alloc_domain) := const(0i, alloc_domain);
 			}
 			
@@ -499,6 +507,8 @@ container GLOBIO
 				attribute<uint8> GridData;
 				attribute<uint8> ReadData (SourceData/CurrentLanduse/ESA_CCI);
 			}
+			
+			attribute<uint8> globio_results_compacted (compacted/alloc_domain) := collect_by_cond(compacted/alloc_domain, compacted/compact_condition, globio_world/ReadData);
 		}
 		
 		container stepped

@@ -23,7 +23,7 @@ container GLOBIO
 		{
 			attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
 			attribute<string>  NameWithClaims: ['Urban', 'Cropland', 'Pasture', 'Rangeland', 'Forestry'];
-			attribute<partitioning> partioning_rel := const(0[partitioning], types);
+			attribute<Allocation/partitioning> partioning_rel := const(0[Allocation/partitioning], types);
 		}
 	}
 	
@@ -238,7 +238,7 @@ container GLOBIO
 				, units/km2
 			)
 			{
-				attribute<uint32> Other (SourceData/Regions/regio) := const(#Compacted/alloc_domain, SourceData/Regions/regio);
+				attribute<uint32> Other (SourceData/Regions/regio) := pcount(Compacted/regio_rel); // const(#Compacted/alloc_domain, SourceData/Regions/regio);
 			}
 			
 			container MaxClaimsScaled := for_each_nedv(
@@ -385,7 +385,14 @@ container GLOBIO
 			container Pasture_t   := Templates/AllocateWeghtedNthElement("Pasture",   21b, Forestry_t/adjusted_alloc_grid);
 			container Rangeland_t := Templates/AllocateWeghtedNthElement("Rangeland", 22b, Pasture_t/adjusted_alloc_grid);
 
-			attribute<uint8> landuse (world_domain) := Rangeland_t/adjusted_alloc_grid[Compacted/BaseGrid];
+			container results_urban     := FenceContainer(Urban_t, "Done Urban allocation using weighted nth-element.");
+			container results_cropland  := FenceContainer(Cropland_t, "Done Cropland allocation using weighted nth-element."), ExplicitSuppliers='results_urban';
+			container results_forestry  := FenceContainer(Forestry_t, "Done Forestry allocation using weighted nth-element."), ExplicitSuppliers='results_cropland';
+			container results_pasture   := FenceContainer(Pasture_t, "Done Pasture allocation using weighted nth-element."), ExplicitSuppliers='results_forestry';
+			container results_rangeland := FenceContainer(Rangeland_t, "Done Rangeland allocation using weighted nth-element."), ExplicitSuppliers='results_pasture';
+
+
+			attribute<uint8> landuse (world_domain) := results_rangeland/adjusted_alloc_grid[Compacted/BaseGrid];
 		}
 		
 		container allocate_stepwise
@@ -431,7 +438,10 @@ container GLOBIO
 	
 	container Export
 	{
-		parameter<string> generate := "Ok", ExplicitSuppliers='allocated_landuse_stepped/GridData';
+		parameter<string> generate_all := "Ok", ExplicitSuppliers='allocated_landuse_stepped/GridData';
+		parameter<string> generate_stepped_discrete    := "Ok", ExplicitSuppliers='allocated_landuse_stepped/GridData';
+		parameter<string> generate_discrete  		   := "Ok", ExplicitSuppliers='allocated_landuse_discrete/GridData';
+		parameter<string> generate_stepped_nth_element := "Ok", ExplicitSuppliers='allocated_landuse_nth_element/GridData';
 		
 		unit<upoint> allocated_landuse_stepped := world_domain
 		, StorageName       = "%GlobioSourceDataDir%/output/geodms_stepped_allocation.tif" 
@@ -447,10 +457,18 @@ container GLOBIO
 		
 		unit<upoint> allocated_landuse_discrete := world_domain
 		, StorageName = "%GlobioSourceDataDir%/output/geodms_discrete_allocation.tif"
-		, StorageType = "tif" //"gdalwrite.grid"
+		, StorageType = "gdalwrite.grid"
 		, StorageReadOnly = "False"
 		{
-		   attribute<uint8> GridData := Allocation/allocate_discrete/allocate/landuse[Compacted/BaseGrid];
+		   attribute<LandUseTypes/types> GridData := Allocation/allocate_discrete/allocate/alloc;
+		}
+		
+		unit<upoint> allocated_landuse_nth_element := world_domain
+		, StorageName = "%GlobioSourceDataDir%/output/geodms_discrete_allocation.tif"
+		, StorageType = "gdalwrite.grid"
+		, StorageReadOnly = "False"
+		{
+		   attribute<uint8> GridData := Allocation/allocate_weighted_nth_element/landuse;
 		}
 	}
 	
@@ -459,7 +477,7 @@ container GLOBIO
 		container reference
 		{
 			unit<upoint> globio_world
-			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled.tif" 
+			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled_no_noise.tif" 
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
 			, DialogType        = "Map"

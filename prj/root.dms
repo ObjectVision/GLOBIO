@@ -17,14 +17,11 @@ container GLOBIO
 	
 	unit<upoint> world_domain := SourceData/CurrentLanduse/ESA_CCI;
 	
-	container LandUseTypes
+	unit <uint8> LandUseType: nrofrows = 6
 	{
-		unit <uint8> types: nrofrows = 6
-		{
-			attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
-			attribute<string>  NameWithClaims: ['Urban', 'Cropland', 'Pasture', 'Rangeland', 'Forestry'];
-			attribute<Allocation/partitioning> partioning_rel := const(0[Allocation/partitioning], types);
-		}
+		attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
+		attribute<string>  NameWithClaims: ['Urban', 'Cropland', 'Pasture', 'Rangeland', 'Forestry'];
+		attribute<Allocation/partitioning> partioning_rel := const(0[Allocation/partitioning], types);
 	}
 	
 	container Geography
@@ -107,15 +104,15 @@ container GLOBIO
 				
 				
 				container keyLandUseType := for_each_nedv(
-					LandUseTypes/types/NameWithClaims 
-					, 'keyString + underscore +' + quote(LandUseTypes/types/NameWithClaims)
+					LandUseType/NameWithClaims 
+					, 'keyString + underscore +' + quote(LandUseType/NameWithClaims)
 					, regio
 					, string
 					);
 				
 				container MaxClaims := for_each_nedv(
-					LandUseTypes/types/NameWithClaims 
-					,'rjoin(keyLandUseType/' + LandUseTypes/types/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+					LandUseType/NameWithClaims 
+					,'rjoin(keyLandUseType/' + LandUseType/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
 					, regio
 					, units/km2
 				);
@@ -123,7 +120,7 @@ container GLOBIO
 			}	
 		}
 		
-		container Suitabilities
+		container Suitabilities : LazyCalculated = "True"
 		{
 			unit<upoint> Urban
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
@@ -131,7 +128,7 @@ container GLOBIO
 			,   DialogData  = "Geography/EPSG_4326" 
 			,   DialogType  = "Map"
 			, 	SpatialReference = "Geography/EPSG_4326"
-			,   LazyCalculated = "True"
+
 			{    
 			   attribute<Float32> GridData;
 			   attribute<Float32> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
@@ -225,15 +222,14 @@ container GLOBIO
 			parameter<string> underscore := '_';
 			attribute<string>    keyString (SourceData/Regions/regio) := string(id(SourceData/Regions/regio));
 
-			container keyLandUseType := for_each_nedv(
-			LandUseTypes/types/NameWithClaims 
-				, 'keyString + underscore +' + quote(LandUseTypes/types/NameWithClaims)
+			container keyLandUseType := for_each_nedv(LandUseType/NameWithClaims 
+				, 'keyString + underscore +' + quote(LandUseType/NameWithClaims)
 				, SourceData/Regions/regio
 				, string
 			);
 
-			container MaxClaims := for_each_nedv(LandUseTypes/types/NameWithClaims 
-				,'rjoin(keyLandUseType/' + LandUseTypes/types/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+			container MaxClaims := for_each_nedv(LandUseType/NameWithClaims 
+				,'rjoin(keyLandUseType/' + LandUseType/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
 				, SourceData/Regions/regio
 				, units/km2
 			)
@@ -242,8 +238,8 @@ container GLOBIO
 			}
 			
 			container MaxClaimsScaled := for_each_nedv(
-				  LandUseTypes/types/NameWithClaims
-				, 'UInt32(MaxClaims/' + LandUseTypes/types/NameWithClaims  + '/ scale_factors[units/km2])'
+				  LandUseType/NameWithClaims
+				, 'UInt32(MaxClaims/' + LandUseType/NameWithClaims  + '/ scale_factors[units/km2])'
 				, SourceData/Regions/regio
 				, uint32
 			
@@ -281,6 +277,13 @@ container GLOBIO
 	
 	container Templates
 	{
+		Template MakeGrid_t {
+			attribute<alloc_type> landuse(alloc_domain);
+			attribute<alloc_domain> BaseGrid(world_domain);
+			
+			attribute<alloc_type> result(world_domain) := lookup(BaseGrid, landuse);
+		}
+		
 		Template AllocateWeghtedNthElement
 		{
 			// begin case parameters
@@ -289,8 +292,8 @@ container GLOBIO
 			attribute<uint8>  alloc_grid (alloc_domain);
 			// end case parameters
 			
-			attribute<Bool> suitability_augmentation_mask_calc (alloc_domain) := alloc_grid == 0b;
-			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
+			attribute<Bool> suitability_augmentation_mask (alloc_domain) := alloc_grid == 0b;
+//			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
 			
 			attribute<int32> SuitabilityMap(alloc_domain) :== 'suitability_augmentation_mask ? Compacted/SuitabilityMaps/' + landuse_name +' : 0i';
 			
@@ -298,10 +301,14 @@ container GLOBIO
 				
 			attribute<int32> zaaglijn(SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
 			
-			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
+			container fc_impl {
+				attribute<uint8> adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
+			}
+			container fc := FenceContainer(fc_impl, 'aag '+landuse_name);
+			attribute<uint8> adjusted_alloc_grid (alloc_domain) := fc/adjusted_alloc_grid;
 		}
 		
-		Template AllocateSteppedLanduse
+		Template SteppedAllocateLanduse
 		{
 			// begin case parameters
 			parameter<string> landuse_name;
@@ -309,8 +316,8 @@ container GLOBIO
 			attribute<uint8>  alloc_grid (alloc_domain);
 			// end case parameters
 			
-			attribute<Bool> suitability_augmentation_mask_calc (alloc_domain) := alloc_grid == 0b;
-			attribute<Bool> suitability_augmentation_mask (alloc_domain)      := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
+			attribute<Bool> suitability_augmentation_mask (alloc_domain) := alloc_grid == 0b;
+//			attribute<Bool> suitability_augmentation_mask      (alloc_domain) := FenceContainer(suitability_augmentation_mask_calc, 'SuitabilityMask ' + landuse_name);
 			
 			unit<uint8> AtomicRegions := SourceData/Regions/regio
 			{
@@ -338,26 +345,28 @@ container GLOBIO
 				}
 			}
 			
-			container allocate_step := 
-			discrete_alloc(
-			Allocation/allocate_stepwise/lu_type/name
-			,Compacted/alloc_domain
-			,SuitabilityMaps
-			,Allocation/allocate_stepwise/lu_type/partioning_rel
-			,Allocation/partitioning/Name
-			,Allocation/AtomicRegions
-			,Compacted/regio_rel
-			,SteppedClaims/Minimum
-			,SteppedClaims/Maximum
-			,0i
-			,FeasibleSolution
+			container allocate_step := discrete_alloc(Allocation/allocate_stepwise/alloc_type/name
+				,Compacted/alloc_domain
+				,SuitabilityMaps
+				,Allocation/allocate_stepwise/alloc_type/partioning_rel
+				,Allocation/partitioning/Name
+				,Allocation/AtomicRegions
+				,Compacted/regio_rel
+				,SteppedClaims/Minimum
+				,SteppedClaims/Maximum
+				,0i
+				,FeasibleSolution
 			)
 			{
-				attribute<Allocation/allocate_stepwise/lu_type> alloc(world_domain) := landuse[Compacted/BaseGrid];
+				
 			}
+							
+			container alloc_step_result {
+				attribute<alloc_type> landuse(alloc_domain) := allocate_step/landuse;
+			}
+			container fenced_alloc_step_result := FenceContainer(alloc_step_result, 'allocate stepped ' + landuse_name );
 			
-			container fenced_allocate_step := FenceContainer(allocate_step, 'allocate stepped ' + landuse_name );
-			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (fenced_allocate_step/landuse==0b) ? landuse_code : alloc_grid;
+			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (fenced_alloc_step_result/landuse==0b) ? landuse_code : alloc_grid;
 		}
 	}
 	
@@ -376,10 +385,10 @@ container GLOBIO
 		container allocate_weighted_nth_element
 		{
 			unit<uint32> alloc_domain := Compacted/alloc_domain;
-			unit <uint8> lu_type: nrofrows = 2
+			unit <uint8> alloc_type: nrofrows = 2
 			{
 				attribute<string>  Name:           ['alloc', 'other'];
-				attribute<partitioning> partioning_rel := const(0[partitioning], lu_type);
+				attribute<partitioning> partioning_rel := const(0[partitioning], alloc_type);
 			}
 			
 			attribute<uint8> initial_alloc_grid (alloc_domain) := parameters/use_zeroed_initial_alloc_grid ? const(0b, alloc_domain) : Compacted/alloc_grid;
@@ -390,35 +399,42 @@ container GLOBIO
 			container Rangeland := Templates/AllocateWeghtedNthElement("Rangeland", 22b, Pasture/adjusted_alloc_grid);
 
 			attribute<uint8> landuse (world_domain) := rangeland/adjusted_alloc_grid[Compacted/BaseGrid];
+			
+			
+			
 		}
 		
 		container allocate_stepwise
 		{
 			unit<uint32> alloc_domain := Compacted/alloc_domain;
-			unit <uint8> lu_type: nrofrows = 2
+			unit <uint8> alloc_type: nrofrows = 2
 			{
 				attribute<string>  Name:           ['alloc', 'other'];
-				attribute<partitioning> partioning_rel := const(0[partitioning], lu_type);
+				attribute<partitioning> partioning_rel := const(0[partitioning], alloc_type);
 			}
 			
 			attribute<uint8> initial_alloc_grid (alloc_domain) := parameters/use_zeroed_initial_alloc_grid ? const(0b, alloc_domain) : Compacted/alloc_grid;
-			container Urban     := Templates/AllocateSteppedLanduse("Urban",      1b, initial_alloc_grid);
-			container Cropland  := Templates/AllocateSteppedLanduse("Cropland",  10b, Urban/adjusted_alloc_grid);
-			container Forestry  := Templates/AllocateSteppedLanduse("Forestry",  30b, Cropland/adjusted_alloc_grid);
-			container Pasture   := Templates/AllocateSteppedLanduse("Pasture",   21b, Forestry/adjusted_alloc_grid);
-			container Rangeland := Templates/AllocateSteppedLanduse("Rangeland", 22b, Pasture/adjusted_alloc_grid);
+			container Urban     := Templates/SteppedAllocateLanduse("Urban",      1b, initial_alloc_grid);
+			container Cropland  := Templates/SteppedAllocateLanduse("Cropland",  10b, Urban/adjusted_alloc_grid);
+			container Forestry  := Templates/SteppedAllocateLanduse("Forestry",  30b, Cropland/adjusted_alloc_grid);
+			container Pasture   := Templates/SteppedAllocateLanduse("Pasture",   21b, Forestry/adjusted_alloc_grid);
+			container Rangeland := Templates/SteppedAllocateLanduse("Rangeland", 22b, Pasture/adjusted_alloc_grid);
 
-			attribute<uint8> landuse (world_domain) := Rangeland/adjusted_alloc_grid[Compacted/BaseGrid];
+			container ResultContainer {
+				attribute<alloc_type> landuse(alloc_domain) := Rangeland/adjusted_alloc_grid;
+			}
+			container FencedResultContainer := FenceContainer(ResultContainer, 'compacted landuse calculated, now start with generating BaseGrid');
+			container MakeGrid := Templates/MakeGrid_t(FencedResultContainer/landuse, Compacted/BaseGrid);
 		}
 		
 		container allocate_discrete
 		{
 			container allocate := 
 			discrete_alloc(
-			LandUseTypes/types/name
+			LandUseType/name
 			,Compacted/alloc_domain
 			,Compacted/SuitabilityMaps
-			,LandUseTypes/types/partioning_rel
+			,LandUseType/partioning_rel
 			,Allocation/partitioning/Name
 			,Allocation/AtomicRegions
 			,Compacted/regio_rel
@@ -428,7 +444,7 @@ container GLOBIO
 			,FeasibleSolution
 			)
 			{
-				attribute<LandUseTypes/types> alloc(world_domain) := landuse[Compacted/BaseGrid];
+				attribute<LandUseType> alloc(world_domain) := landuse[Compacted/BaseGrid];
 			}
 		}
 	}
@@ -449,7 +465,7 @@ container GLOBIO
 		, ExplicitSuppliers = "Allocation/allocate_stepwise/Rangeland_t/adjusted_alloc_grid"
 		, StorageReadOnly   = "False"
 		{
-		   attribute<uint8> GridData := Allocation/allocate_stepwise/landuse, Descr="Geography/EPSG_4326";
+		   attribute<uint8> GridData := Allocation/WriteGrid/result, Descr="Geography/EPSG_4326";
 		}
 		
 		unit<upoint> allocated_landuse_discrete := world_domain
@@ -457,7 +473,7 @@ container GLOBIO
 		, StorageType = "gdalwrite.grid"
 		, StorageReadOnly = "False"
 		{
-		   attribute<LandUseTypes/types> GridData := Allocation/allocate_discrete/allocate/alloc;
+		   attribute<LandUseType> GridData := Allocation/allocate_discrete/allocate/alloc;
 		}
 		
 		unit<upoint> allocated_landuse_nth_element := world_domain

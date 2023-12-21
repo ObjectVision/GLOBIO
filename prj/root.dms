@@ -238,7 +238,7 @@ container GLOBIO
 				, units/km2
 			)
 			{
-				attribute<uint32> Other (SourceData/Regions/regio) := pcount(Compacted/regio_rel); // const(#Compacted/alloc_domain, SourceData/Regions/regio);
+				attribute<uint32> Other (SourceData/Regions/regio) := 4000000000;
 			}
 			
 			container MaxClaimsScaled := for_each_nedv(
@@ -295,7 +295,8 @@ container GLOBIO
 			
 			Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/test/MaxClaims/' + landuse_name;
 				
-			attribute<int32> zaaglijn(SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
+			attribute<int32> zaaglijn_calc(SourceData/Regions/regio) := Nth_element_weighted(-SuitabilityMap, AreaClaim, Compacted/Area, Compacted/regio_rel);
+			attribute<int32> zaaglijn(SourceData/Regions/regio) := FenceContainer(zaaglijn_calc, 'zaag '+landuse_name);
 			
 			attribute<uint8> adjusted_alloc_grid (alloc_domain) := (zaaglijn[Compacted/regio_rel] <= -SuitabilityMap) ? landuse_code : alloc_grid;
 		}
@@ -379,20 +380,13 @@ container GLOBIO
 			}
 			
 			attribute<uint8> initial_alloc_grid (alloc_domain) := parameters/use_zeroed_initial_alloc_grid ? const(0b, alloc_domain) : Compacted/alloc_grid;
-			container Urban_t     := Templates/AllocateWeghtedNthElement("Urban",      1b, initial_alloc_grid);
-			container Cropland_t  := Templates/AllocateWeghtedNthElement("Cropland",  10b, Urban_t/adjusted_alloc_grid);
-			container Forestry_t  := Templates/AllocateWeghtedNthElement("Forestry",  30b, Cropland_t/adjusted_alloc_grid);
-			container Pasture_t   := Templates/AllocateWeghtedNthElement("Pasture",   21b, Forestry_t/adjusted_alloc_grid);
-			container Rangeland_t := Templates/AllocateWeghtedNthElement("Rangeland", 22b, Pasture_t/adjusted_alloc_grid);
+			container Urban     := Templates/AllocateWeghtedNthElement("Urban",      1b, initial_alloc_grid);
+			container Cropland  := Templates/AllocateWeghtedNthElement("Cropland",  10b, Urban/adjusted_alloc_grid);
+			container Forestry  := Templates/AllocateWeghtedNthElement("Forestry",  30b, Cropland/adjusted_alloc_grid);
+			container Pasture   := Templates/AllocateWeghtedNthElement("Pasture",   21b, Forestry/adjusted_alloc_grid);
+			container Rangeland := Templates/AllocateWeghtedNthElement("Rangeland", 22b, Pasture/adjusted_alloc_grid);
 
-			container results_urban     := FenceContainer(Urban_t, "Done Urban allocation using weighted nth-element.");
-			container results_cropland  := FenceContainer(Cropland_t, "Done Cropland allocation using weighted nth-element."), ExplicitSuppliers='results_urban';
-			container results_forestry  := FenceContainer(Forestry_t, "Done Forestry allocation using weighted nth-element."), ExplicitSuppliers='results_cropland';
-			container results_pasture   := FenceContainer(Pasture_t, "Done Pasture allocation using weighted nth-element."), ExplicitSuppliers='results_forestry';
-			container results_rangeland := FenceContainer(Rangeland_t, "Done Rangeland allocation using weighted nth-element."), ExplicitSuppliers='results_pasture';
-
-
-			attribute<uint8> landuse (world_domain) := results_rangeland/adjusted_alloc_grid[Compacted/BaseGrid];
+			attribute<uint8> landuse (world_domain) := rangeland/adjusted_alloc_grid[Compacted/BaseGrid];
 		}
 		
 		container allocate_stepwise

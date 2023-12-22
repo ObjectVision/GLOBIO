@@ -62,8 +62,6 @@ container GLOBIO
 			:   StorageName = "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			, 	SpatialReference = "Geography/EPSG_4326"
 			,   StorageReadOnly = "True"
 			{    
 			   attribute<LandUseCode> GridData;
@@ -74,8 +72,6 @@ container GLOBIO
 		: 	StorageName = "%GlobioSourceDataDir%/input/areakm2_10sec.tif" 
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
-		,   DialogType  = "Map"
-		, 	SpatialReference = "Geography/EPSG_4326"
 		,   StorageReadOnly = "True"
 		{
 		   attribute<units/km2> GridData;
@@ -86,8 +82,6 @@ container GLOBIO
 		: 	StorageName = "%GlobioSourceDataDir%/input/pa_reduce_factor_wdpa_2018_july.tif" 
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
-		,   DialogType  = "Map"
-		, 	SpatialReference = "Geography/EPSG_4326"
 		,   StorageReadOnly = "True"
 		{
 		   attribute<Float32> GridData;
@@ -100,8 +94,6 @@ container GLOBIO
 			:   StorageName = "%GlobioSourceDataDir%/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			, 	SpatialReference = "Geography/EPSG_4326"
 			,   StorageReadOnly = "True"
 			{    
 			   attribute<regio> GridData;
@@ -114,7 +106,6 @@ container GLOBIO
 			: StorageName = "%GlobioSourceDataDir%/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
 			, StorageType = "gdal.vect"
 			, StorageReadOnly = "True"
-			, LazyCalculated = "False"
 			, KeepData = "True"
 			{
 				attribute<string>    keyString     := string(id(.));
@@ -142,9 +133,6 @@ container GLOBIO
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			, 	SpatialReference = "Geography/EPSG_4326"
-
 			{    
 			   attribute<Float32> GridData;
 			   attribute<Float32> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
@@ -154,8 +142,6 @@ container GLOBIO
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			, 	SpatialReference = "Geography/EPSG_4326"
 			{    
 			   attribute<Float32> GridData;
 			   attribute<Float32> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
@@ -165,8 +151,6 @@ container GLOBIO
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			, 	SpatialReference = "Geography/EPSG_4326"
 			{    
 			   attribute<Float32> GridData;
 			   attribute<Float32> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
@@ -176,8 +160,6 @@ container GLOBIO
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			, 	SpatialReference = "Geography/EPSG_4326"
 			{    
 			   attribute<Float32> GridData;
 			   attribute<Float32> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
@@ -186,22 +168,9 @@ container GLOBIO
 			unit<upoint> NotAllocatable
 			:   StorageName = "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif"
 			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			//,   StorageType = "gdal.grid"
-			, 	SpatialReference = "Geography/EPSG_4326"
 			{    
 			   attribute<Bool> GridData;
 			   attribute<Bool> ReadData(SourceData/CurrentLanduse/ESA_CCI); 
-			}
-			
-			unit<upoint> NotAllocatable1
-			:   StorageName = "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif"
-			,   DialogData  = "Geography/EPSG_4326" 
-			,   DialogType  = "Map"
-			//,   StorageType = "gdal.grid"
-			, 	SpatialReference = "Geography/EPSG_4326"
-			{    
-
 			}
 		}
 	}
@@ -299,12 +268,14 @@ container GLOBIO
 	{
 		Template MakeGrid_t {
 			attribute<LandUseType> landuse(alloc_domain);			
-			attribute<alloc_domain> BaseGrid(world_domain);
 			parameter<string> OutputFileName;
 			
 			attribute<LandUseCode> LandUseCode_rel (alloc_domain) := landuse->LandUseCode_rel;
 			
-			attribute<LandUseCode> result(world_domain) := lookup(BaseGrid, LandUseCode_rel), StorageName = "='%GlobioSourceDataDir%/output/'+OutputFileName+'.TIF'";
+			attribute<LandUseCode> result(world_domain) := recollect_by_cond(Compacted/compact_condition, LandUseCode_rel)
+			, StorageName = "='%GlobioSourceDataDir%/output/'+OutputFileName+'.TIF'"
+			, StorageType       = "gdalwrite.grid"
+			, DialogData        = "Geography/EPSG_4326";
 		}
 		
 		Template AllocateWeghtedNthElement
@@ -402,7 +373,7 @@ container GLOBIO
 			container Rangeland := Templates/AllocateWeghtedNthElement(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
 
 			attribute<LandUseType> Landuse (alloc_domain) := rangeland/adjusted_alloc_state;
-			container MakeGrid := Templates/MakeGrid_t(landuse, Compacted/BaseGrid, 'WeightedNthElement');
+			container MakeGrid := Templates/MakeGrid_t(landuse, 'WeightedNthElement');
 		}
 		
 		container allocate_stepwise
@@ -415,7 +386,7 @@ container GLOBIO
 
 			attribute<LandUseType> landuse(alloc_domain) := Rangeland/adjusted_alloc_state;
 			
-			container MakeGrid := Templates/MakeGrid_t(landuse, Compacted/BaseGrid, 'Stepwise');
+			container MakeGrid := Templates/MakeGrid_t(landuse, 'Stepwise');
 		}
 		
 		container allocate_discrete
@@ -432,44 +403,17 @@ container GLOBIO
 				,FeasibleSolution
 			);
 			
-			container MakeGrid := Templates/MakeGrid_t(allocate/landuse, Compacted/BaseGrid, 'DiscreteAlloc');
+			container MakeGrid := Templates/MakeGrid_t(allocate/landuse, 'DiscreteAlloc');
 		}
 	}
 	
 	container Export
 	{
-		parameter<string> generate_all := "Ok", ExplicitSuppliers='allocated_landuse_stepped/GridData';
-		parameter<string> generate_stepped_discrete    := "Ok", ExplicitSuppliers='allocated_landuse_stepped/GridData';
-		parameter<string> generate_discrete  		   := "Ok", ExplicitSuppliers='allocated_landuse_discrete/GridData';
-		parameter<string> generate_stepped_nth_element := "Ok", ExplicitSuppliers='allocated_landuse_nth_element/GridData';
+ 		parameter<string> generate_weighted_nth_element := "Ok", ExplicitSuppliers="/Allocation/allocate_weighted_nth_element/MakeGrid/result";
+		parameter<string> generate_stepwise_alloc       := "Ok", ExplicitSuppliers="/Allocation/allocate_stepwise/MakeGrid/result";
+		parameter<string> generate_competitive_alloc    := "Ok", ExplicitSuppliers="/Allocation/allocate_discrete/MakeGrid/result";
 		
-		unit<upoint> allocated_landuse_stepped := world_domain
-		, StorageName       = "%GlobioSourceDataDir%/output/geodms_stepped_allocation.tif" 
-		, StorageType       = "gdalwrite.grid"
-		, DialogData        = "Geography/EPSG_4326"
-		, DialogType        = "Map"
-		, SpatialReference  = "Geography/EPSG_4326"
-		, ExplicitSuppliers = "Allocation/allocate_stepwise/Rangeland_t/adjusted_alloc_state"
-		, StorageReadOnly   = "False"
-		{
-		   attribute<uint8> GridData := Allocation/WriteGrid/result, Descr="Geography/EPSG_4326";
-		}
-		
-		unit<upoint> allocated_landuse_discrete := world_domain
-		, StorageName = "%GlobioSourceDataDir%/output/geodms_discrete_allocation.tif"
-		, StorageType = "gdalwrite.grid"
-		, StorageReadOnly = "False"
-		{
-		   attribute<LandUseType> GridData := Allocation/allocate_discrete/allocate/alloc;
-		}
-		
-		unit<upoint> allocated_landuse_nth_element := world_domain
-		, StorageName = "%GlobioSourceDataDir%/output/geodms_discrete_allocation.tif"
-		, StorageType = "gdalwrite.grid"
-		, StorageReadOnly = "False"
-		{
-		   attribute<uint8> GridData := Allocation/allocate_weighted_nth_element/landuse;
-		}
+		parameter<string> generate_all := generate_weighted_nth_element + generate_stepwise_alloc + generate_competitive_alloc;
 	}
 	
 	container Evaluate
@@ -477,10 +421,10 @@ container GLOBIO
 		container reference
 		{
 			unit<upoint> globio_world
-			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled_no_noise.tif" 
+			: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled.tif" 
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
-			, DialogType        = "Map"
+//			, DialogType        = "Map"
 			, StorageReadOnly = "True"
 			{
 				attribute<uint8> GridData;
@@ -490,13 +434,13 @@ container GLOBIO
 			attribute<uint8> globio_results_compacted (alloc_domain) := collect_by_cond(alloc_domain, compacted/compact_condition, globio_world/ReadData);
 		}
 		
-		container stepped
+		container geodms_result
 		{
 			unit<upoint> dms_world := SourceData/CurrentLanduse/ESA_CCI
-			, StorageName = "%GlobioSourceDataDir%/output/geodms_stepped_allocation.tif" 
+			, StorageName = "%GlobioSourceDataDir%/output/WeightedNthElement.tif" 
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
-			, DialogType        = "Map"
+//			, DialogType        = "Map"
 			, StorageReadOnly = "True"
 			{
 				attribute<uint8> GridData;

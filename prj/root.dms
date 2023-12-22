@@ -31,8 +31,9 @@ container GLOBIO
 		attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
 		attribute<string>  NameWithClaims: ['Urban', 'Cropland', 'Pasture', 'Rangeland', 'Forestry'];
 		attribute<partitioning> partioning_rel := const(0[partitioning], .);
-		attribute<LandUseCode> LandUseCode_rel : [ 1, 10, 30, 21, 22, 0];
-		attribute<uint32> BrushColor: [ rgb(255, 0, 0), rgb(255, 255, 0), rgb(128,255,128), rgb(255, 255, 128), rgb(0, 196, 0), rgb(128, 128, 128)], DialogType = "BrushColor";
+		attribute<LandUseCode> LandUseCode_rel : [ 1, 10, 21, 22, 30, 0];
+		attribute<uint32> BrushColor: [ rgb(255, 0, 0), rgb(128, 128, 0), rgb(128,255,128), rgb(255, 255, 64), rgb(32, 196, 0), rgb(128, 128, 128)], DialogType = "BrushColor";
+		attribute<string> Label := Name, DialogType = "LabelText";
 		
 		container V := for_each_nedv(Name, string(id(.))+'[..]', void, .);
 	}

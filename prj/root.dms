@@ -49,9 +49,11 @@ container GLOBIO
 		attribute<partitioning> partioning_rel := const(0[partitioning], alloc_type);
 	}
 	
+	#include<wms_layer_llh.dms>
+	
 	container Geography
 	{
-		unit<fpoint> EPSG_4326 : SpatialReference = "EPSG:4326";
+		unit<fpoint> EPSG_4326 : SpatialReference = "EPSG:4326", DialogData = "wms_layer_llh";
 		unit<upoint> nl : Range = "[{3, 50}, {8, 54})]";
 	}
 	
@@ -369,7 +371,7 @@ container GLOBIO
 		container allocate_weighted_nth_element
 		{
 			container Urban     := Templates/AllocateWeghtedNthElement(LanduseType/V/Urban,     Compacted/initial_alloc_state);
-			container Cropland  := Templates/AllocateWeghtedNthElement(LanduseType/V/Cropland,   Urban/adjusted_alloc_state);
+			container Cropland  := Templates/AllocateWeghtedNthElement(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
 			container Forestry  := Templates/AllocateWeghtedNthElement(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
 			container Pasture   := Templates/AllocateWeghtedNthElement(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
 			container Rangeland := Templates/AllocateWeghtedNthElement(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
@@ -427,6 +429,7 @@ container GLOBIO
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
 			, StorageReadOnly = "True"
+			, LazyCalculated = "True"
 			{
 				attribute<LanduseCode> GridData;
 				attribute<LanduseCode> ReadData (grid_domain);
@@ -444,6 +447,7 @@ container GLOBIO
 			, StorageType = "gdal.grid"
 			, DialogData        = "Geography/EPSG_4326"
 			, StorageReadOnly = "True"
+			, LazyCalculated = "True"
 			{
 				attribute<LanduseCode> GridData;
 				
@@ -451,10 +455,10 @@ container GLOBIO
 			}
 		}
 		
-		attribute<bool> is_different(grid_domain) := reference/python_world/LanduseType_rel != geodms_result/dms_world/LandUseType_rel
+		attribute<bool> is_different(grid_domain) := reference/python_world/LanduseType_rel != geodms_result/dms_world/LandUseType_rel, KeepData = "True" // 1 Gb.
 		{
-			attribute<LandUseType> python(grid_domain) := is_different ? reference/python_world/LanduseType_rel  : null_b[LandUseType];
-			attribute<LandUseType> geodms(grid_domain) := is_different ? geodms_result/dms_world/LanduseType_rel : null_b[LandUseType];
+			attribute<LandUseType> python(grid_domain) := is_different ? reference/python_world/LanduseType_rel  : null_b[LandUseType], LazyCalculated = "True", KeepData = "False";
+			attribute<LandUseType> geodms(grid_domain) := is_different ? geodms_result/dms_world/LanduseType_rel : null_b[LandUseType], LazyCalculated = "True", KeepData = "False";
 		}
 		
 		container indicators 

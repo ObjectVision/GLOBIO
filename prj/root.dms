@@ -9,7 +9,7 @@ container GLOBIO
 	container parameters
 	{
 		parameter<bool> use_zeroed_initial_alloc_grid := True;
-		parameter<float32> SuitStepFactor := 1000000f;
+		parameter<float32> SuitStepFactor := 1073741824.0f;
 	}
 	
 	container units
@@ -53,7 +53,10 @@ container GLOBIO
 	
 	container Geography
 	{
-		unit<fpoint> EPSG_4326 : SpatialReference = "EPSG:4326", DialogData = "wms_layer_llh";
+		unit<fpoint> EPSG_4326 : SpatialReference = "EPSG:4326", DialogData = "wms_layer_llh"
+		{
+			parameter<Float64> ViewPortMinSize := 0.1;
+		}
 		unit<upoint> nl : Range = "[{3, 50}, {8, 54})]";
 	}
 	
@@ -133,7 +136,8 @@ container GLOBIO
 		container Suitabilities : LazyCalculated = "True"
 		{
 			unit<upoint> Urban
-			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
+//.			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_urban.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -143,6 +147,7 @@ container GLOBIO
 			
 			unit<upoint> Pasture
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -152,6 +157,7 @@ container GLOBIO
 			
 			unit<upoint> Cropland
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -161,6 +167,7 @@ container GLOBIO
 			
 			unit<upoint> Forestry
 			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -240,7 +247,11 @@ container GLOBIO
 	container Compacted
 	{
 		attribute<Bool> compact_condition(world_domain) := not(SourceData/Suitabilities/NotAllocatable/ReadData);
-		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid";
+		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
+		{
+			attribute<world_domain> grid_rel(.) := collect_by_cond(domain, compact_condition, ID(world_domain));
+			attribute<int64> ordinal(.) := int64(pointrow(grid_rel)) *  129600i64 + int64(pointcol(grid_rel));
+		}
 		attribute<domain> BaseGrid(world_domain) := recollect_by_cond(compact_condition, id(domain));
 
 		attribute<LandUseCode> CurrentLandUseCode (domain) := collect_by_cond(domain, compact_condition, SourceData/CurrentLanduse/ESA_CCI/GridData);
@@ -298,14 +309,14 @@ container GLOBIO
 			
 			attribute<int64> Rank_1(domain) := int64(SuitabilityMap), LazyCalculated = "True";
 			attribute<int64> Rank_2(domain) := Rank_1 * int64(#domain), LazyCalculated = "True";
-			attribute<int64> Rank_3(domain) := int64(id(domain)), LazyCalculated = "True";
-			attribute<int64> Rank_4(domain) := Rank_2 + Rank_3, LazyCalculated = "True";
+			attribute<int64> Rank_3(domain) := domain/ordinal;
+			attribute<int64> Rank_4(domain) := Rank_2 - Rank_3, LazyCalculated = "True";
 			
 			attribute<int64> Rank(domain) := - Rank_4, LazyCalculated = "True";
 			
 			Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/Area/' + landuse_name;
 				
-			attribute<int64> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, AreaClaim, Compacted/Area, Compacted/regio_rel);
+			attribute<int64> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, float64(AreaClaim), float64(Compacted/Area), Compacted/regio_rel);
 			attribute<int64> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i64), KeepData = "True";
 			
 			attribute<bool>  allocate(domain) := Rank < zaaglijn[Compacted/regio_rel], LazyCalculated = "True";
@@ -382,7 +393,7 @@ container GLOBIO
 		
 		container allocate_stepwise
 		{
-			container Urban     := Templates/SteppedAllocateLanduse(LanduseType/V/Urban, Compacted/initial_alloc_state);
+			container Urban     := Templates/SteppedAllocateLanduse(LanduseType/V/Urban,     Compacted/initial_alloc_state);
 			container Cropland  := Templates/SteppedAllocateLanduse(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
 			container Forestry  := Templates/SteppedAllocateLanduse(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
 			container Pasture   := Templates/SteppedAllocateLanduse(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
@@ -434,10 +445,10 @@ container GLOBIO
 				attribute<LanduseCode> GridData;
 				attribute<LanduseCode> ReadData (grid_domain);
 				
-				attribute<LandUseType> LanduseType_rel(grid_domain) := ReadData->LandUseType_rel;
+				attribute<LandUseType> LanduseType_rel(grid_domain) := MakeDefined(LandUseCode/LandUseType_rel, LandUseType/V/Other)[ReadData], LazyCalculated = "True";
 			}
 			
-			attribute<uint8> globio_results_compacted (domain) := collect_by_cond(domain, compacted/compact_condition, globio_world/ReadData);
+//			attribute<uint8> globio_results_compacted (domain) := collect_by_cond(domain, compacted/compact_condition, python_world/ReadData);
 		}
 		
 		container geodms_result
@@ -451,7 +462,7 @@ container GLOBIO
 			{
 				attribute<LanduseCode> GridData;
 				
-				attribute<LandUseType> LanduseType_rel := GridData->LandUseType_rel;
+				attribute<LandUseType> LanduseType_rel := MakeDefined(LandUseCode/LandUseType_rel, LandUseType/V/Other)[GridData];
 			}
 		}
 		
@@ -468,8 +479,10 @@ container GLOBIO
 				, StorageType = "gdalwrite.vect"
 				, StorageReadOnly = "False"
 			{
-				attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==1b, SourceData/Regions/IMAGE/ReadData);
-				attribute<uint32> dms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==1b, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> python_num_urban_cells  := sum_uint32(reference/python_world/ReadData==1b, SourceData/Regions/IMAGE/ReadData);
+				attribute<Float64> python_area  := sum_float64(Float32(reference/python_world/ReadData==1b) * SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);
+				attribute<Float64> geodms_area  := sum_float64(Float32(geodms_result/dms_world/LandUseType_rel==LandUseType/V/Urban) * SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);
+				attribute<uint32> geodms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==1b, SourceData/Regions/IMAGE/ReadData);
 				attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
 				attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
 			}

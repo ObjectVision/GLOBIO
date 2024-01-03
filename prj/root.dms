@@ -383,9 +383,9 @@ container GLOBIO
 		{
 			container Urban     := Templates/AllocateWeghtedNthElement(LanduseType/V/Urban,     Compacted/initial_alloc_state);
 			container Cropland  := Templates/AllocateWeghtedNthElement(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
-			container Forestry  := Templates/AllocateWeghtedNthElement(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
-			container Pasture   := Templates/AllocateWeghtedNthElement(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
-			container Rangeland := Templates/AllocateWeghtedNthElement(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
+			container Pasture   := Templates/AllocateWeghtedNthElement(LanduseType/V/Pasture,   Cropland/adjusted_alloc_state);
+			container Forestry  := Templates/AllocateWeghtedNthElement(LanduseType/V/Forestry,  Pasture/adjusted_alloc_state);
+			container Rangeland := Templates/AllocateWeghtedNthElement(LanduseType/V/Rangeland, Forestry/adjusted_alloc_state);
 
 			attribute<LandUseType> Landuse (domain) := rangeland/adjusted_alloc_state;
 			container MakeGrid := Templates/MakeGrid_t(landuse, 'WeightedNthElement');
@@ -395,9 +395,9 @@ container GLOBIO
 		{
 			container Urban     := Templates/SteppedAllocateLanduse(LanduseType/V/Urban,     Compacted/initial_alloc_state);
 			container Cropland  := Templates/SteppedAllocateLanduse(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
-			container Forestry  := Templates/SteppedAllocateLanduse(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
-			container Pasture   := Templates/SteppedAllocateLanduse(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
-			container Rangeland := Templates/SteppedAllocateLanduse(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
+			container Pasture   := Templates/SteppedAllocateLanduse(LanduseType/V/Pasture,   Cropland/adjusted_alloc_state);
+			container Forestry  := Templates/SteppedAllocateLanduse(LanduseType/V/Forestry,  Pasture/adjusted_alloc_state);
+			container Rangeland := Templates/SteppedAllocateLanduse(LanduseType/V/Rangeland, Forestry/adjusted_alloc_state);
 
 			attribute<LandUseType> landuse(domain) := Rangeland/adjusted_alloc_state;
 			

@@ -19,7 +19,15 @@ container GLOBIO
 		unit<float32> km2 := km * km;
 	}
 	
-	unit<upoint> world_domain := SourceData/CurrentLanduse/ESA_CCI;
+	unit<upoint> world_domain := SourceData/CurrentLanduse/ESA_CCI
+	{
+			attribute<uint32> pr(.) := pointrow(ID(.)), LazyCalculated = "True";
+			attribute<uint32> pc(.) := pointcol(ID(.)), LazyCalculated = "True";
+			attribute<int64> i64pr := int64(pr), LazyCalculated = "True";
+			attribute<int64> i64pc := int64(pc), LazyCalculated = "True";
+			attribute<int64> i64pr_base := i64pr * 129600i64, LazyCalculated = "True";
+			attribute<int64> ordinal(.) := i64pr_base + i64pc, LazyCalculated = "True";
+	}
 	
 	unit <uint8> partitioning: nrofrows = 1
 	{
@@ -146,8 +154,8 @@ container GLOBIO
 			}
 			
 			unit<upoint> Pasture
-			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -156,8 +164,8 @@ container GLOBIO
 			}
 			
 			unit<upoint> Cropland
-			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -166,8 +174,8 @@ container GLOBIO
 			}
 			
 			unit<upoint> Forestry
-			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -249,8 +257,8 @@ container GLOBIO
 		attribute<Bool> compact_condition(world_domain) := not(SourceData/Suitabilities/NotAllocatable/ReadData);
 		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
 		{
-			attribute<world_domain> grid_rel(.) := collect_by_cond(domain, compact_condition, ID(world_domain));
-			attribute<int64> ordinal(.) := int64(pointrow(grid_rel)) *  129600i64 + int64(pointcol(grid_rel));
+//			attribute<world_domain> grid_rel(.) := collect_by_cond(domain, compact_condition, ID(world_domain));
+			attribute<int64> ordinal(.) := collect_by_cond(domain, compact_condition, world_domain/ordinal);
 		}
 		attribute<domain> BaseGrid(world_domain) := recollect_by_cond(compact_condition, id(domain));
 
@@ -383,9 +391,9 @@ container GLOBIO
 		{
 			container Urban     := Templates/AllocateWeghtedNthElement(LanduseType/V/Urban,     Compacted/initial_alloc_state);
 			container Cropland  := Templates/AllocateWeghtedNthElement(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
-			container Pasture   := Templates/AllocateWeghtedNthElement(LanduseType/V/Pasture,   Cropland/adjusted_alloc_state);
-			container Forestry  := Templates/AllocateWeghtedNthElement(LanduseType/V/Forestry,  Pasture/adjusted_alloc_state);
-			container Rangeland := Templates/AllocateWeghtedNthElement(LanduseType/V/Rangeland, Forestry/adjusted_alloc_state);
+			container Forestry  := Templates/AllocateWeghtedNthElement(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
+			container Pasture   := Templates/AllocateWeghtedNthElement(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
+			container Rangeland := Templates/AllocateWeghtedNthElement(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
 
 			attribute<LandUseType> Landuse (domain) := rangeland/adjusted_alloc_state;
 			container MakeGrid := Templates/MakeGrid_t(landuse, 'WeightedNthElement');
@@ -395,9 +403,9 @@ container GLOBIO
 		{
 			container Urban     := Templates/SteppedAllocateLanduse(LanduseType/V/Urban,     Compacted/initial_alloc_state);
 			container Cropland  := Templates/SteppedAllocateLanduse(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
-			container Pasture   := Templates/SteppedAllocateLanduse(LanduseType/V/Pasture,   Cropland/adjusted_alloc_state);
-			container Forestry  := Templates/SteppedAllocateLanduse(LanduseType/V/Forestry,  Pasture/adjusted_alloc_state);
-			container Rangeland := Templates/SteppedAllocateLanduse(LanduseType/V/Rangeland, Forestry/adjusted_alloc_state);
+			container Forestry  := Templates/SteppedAllocateLanduse(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
+			container Pasture   := Templates/SteppedAllocateLanduse(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
+			container Rangeland := Templates/SteppedAllocateLanduse(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
 
 			attribute<LandUseType> landuse(domain) := Rangeland/adjusted_alloc_state;
 			

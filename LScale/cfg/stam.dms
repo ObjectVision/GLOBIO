@@ -1,0 +1,836 @@
+// TODO
+//	GEODMS
+//		export data with gdal
+//		aggr functies (pcount, sum, all, any, lookup, modus) met related unit als partitioner naast de huidige partitioning attribuut.
+//		allow for template type placeholders allowing for heterogeneous instantiations
+//		tile-by-tile pipelining to reduce memory consumption
+// 		implement simplified discrete_alloc for the single partitioning case (and for no partitioning at all)
+
+container LandScale: FreeData = "True"
+{
+	container geometry {
+		unit<dpoint> LatLong := range(dpoint, point(-90.0,-180.0), point(90.0, 180.0))
+		{
+			parameter<float32> ViewPortMinSize := 100f / 3600f;
+		}
+		unit<spoint> NEPO_kernel := range(spoint, point(-10s, -10s), point(11s, 11s))
+		{
+			attribute<uint32> SqrDst  := dist2(point(0s,0s, NEPO_kernel), uint32);
+			attribute<Float32> Weight := scalesum(1f/sqrt(float32(SqrDst+1)), 1.0f);
+		}
+
+		parameter<LatLong> StudyArea_SouthWest := point(00.0, -15.0, geometry/LatLong); //  @@USERINPUT, sort of SW of Europe
+		parameter<LatLong> StudyArea_NorthEast := point(60.0,  75.0, geometry/LatLong); //  @@USERINPUT, sort of NE of Europe
+//		parameter<LatLong> StudyArea_SouthWest := point(60.0, -15.0, geometry/LatLong); //  @@USERINPUT, Iceland?
+//		parameter<LatLong> StudyArea_NorthEast := point(90.0,  45.0, geometry/LatLong); //  @@USERINPUT, North pole above Nova Zembla?
+		unit<ipoint> SelectedStudyArea := 
+			range(brondata/GlobCoverTIFF, 
+				StudyArea_SouthWest[brondata/GlobCoverTIFF],
+				StudyArea_NorthEast[brondata/GlobCoverTIFF]
+			);
+
+		// StudyArea, the area for which aggregations are made (with integer scale factors >= 2); can be all of the world.
+		// TODO: allow for processing a range of StudyAreas
+		unit<ipoint> StudyArea := brondata/GlobCoverTIFF; // @@USERINPUT: Choose all of GlobCoverTIFF
+//		unit<ipoint> StudyArea := SelectedStudyArea;      // @@USERINPUT: Choose a selection as specified below.
+		
+		unit<ipoint> domain := TiledUnit(point(256i, 129600i, StudyArea));
+		
+		// ====== SampleArea for with the indicators are calculated without aggregation
+		// cannot be larger than 2^16 pixes wide, which is approx. 180 Degrees as 1 pixes is 10 arcsecs.
+		// TODO: allow for processing a range of SampleAreas
+		
+		parameter<LatLong> SampleArea_NorthWest := point(60.0, -10.0, geometry/LatLong); //  @@USERINPUT
+		parameter<LatLong> SampleArea_SouthEast := point(40.0,  30.0, geometry/LatLong); //  @@USERINPUT
+		
+		unit<wpoint> SampleRaster := gridset(brondata/GlobCoverTIFF, point(1w, 1w), SampleArea_NorthWest[brondata/GlobCoverTIFF], wpoint);
+		unit<wpoint> SampleArea   := range(SampleRaster, point(0w, 0w), SampleArea_SouthEast[SampleRaster]); // NorthEast of SampleArea 
+		unit<wpoint> sample_domain := TiledUnit(point(1024w, 1024w, SampleArea));
+		
+		// ====== rectangular landscape zones.
+		unit<spoint> Deg10 := gridset(LatLong, point(10s, 10s), point(-90s, -180s), spoint) 
+		{ 
+			attribute<UInt32> LandCount := sum(UInt32(classifications/LULC/IsLand[brondata/LULC_rel]), mapping(domain, .)), FreeData = "False"; 
+			parameter<dpoint> factor := GetProjectionFactor(.) / GetProjectionFactor(domain);
+			attribute<bool> HasLand := LandCount >= uint32(sqr(PointCol(factor)) * 0.10), // use block when more than 1 / 10th of the area is land.
+				IntegrityCheck = "sum(UInt32(this)) < 255";
+			attribute<classifications/Deg10Zone> Zone_rel := MakeDefined(invert(classifications/Deg10Zone/Deg10_rel), classifications/Deg10Zone/RestZone);
+		}
+		unit<spoint> Deg15 := gridset(LatLong, point(15s, 15s), point(-90s, -180s), spoint) 
+		{ 
+			attribute<UInt32> LandCount := sum(UInt32(classifications/LULC/IsLand[brondata/LULC_rel]), mapping(domain, .)); 
+			parameter<dpoint> factor := GetProjectionFactor(.) / GetProjectionFactor(domain);
+			attribute<bool> HasLand := LandCount >= uint32(sqr(PointCol(factor)) * 0.10), // use block when more than 1 / 10th of the area is land.
+				IntegrityCheck = "sum(UInt32(this)) < 255";
+			attribute<classifications/Deg15Zone> Zone_rel := MakeDefined(invert(classifications/Deg15Zone/Deg15_rel), classifications/Deg15Zone/RestZone);
+		}
+	}
+	container units {
+		unit<float32> meter := BaseUnit('m', float32);
+		unit<float32> meter2:= meter * meter;
+		unit<float32> km    := 1000.0 * meter;
+		unit<float32> km2   := km * km;
+	}
+	container classifications
+	{
+		unit<uint8> GlobCoverValue
+		:	StorageName = "%ProjDir%/data/Globcover2009_Legend.csv"
+		,	StorageType = "gdal.vect"
+		,	StorageReadOnly = "true"
+		{
+			attribute<uint32> Color := rgb(uint16(red), uint16(green), uint16(blue)), DialogType = "BrushColor";
+			attribute<float32> MSA_value := float32(replace(MSA,',','.'));
+			attribute<LULC> LULC_rel := convert(LULC_index, LULC);
+		}
+		unit<uint8> GlobCoverData
+		{
+			attribute<GlobCoverValue> GlobCoverValue_rel := invert(uint8(GlobCoverValue/Value)[GlobCoverData]);
+		}
+		
+		unit<uint8> LULC : nrofrows = 9 // @USERINPUT@ Could be read from a .csv file as well; if defined here, nrofrows must correspond with the element counts of the following attributes.
+		{
+			attribute<string> Label : [ 'Croplands', 'Forests', 'Grasslands', 'SparseVegetation', 'Wetlands', 'Urban', 'Bare', 'Water', 'NoData'];
+			attribute<bool>   IsLand := Label != 'Water';
+			attribute<GlobCoverValue> GlobCoverValue_rel := invert(GlobCoverValue/LULC_rel); // indicates for each LULC the last GlobCoverValue that refers to it
+			attribute<uint32> Color := GlobCoverValue/Color[GlobCoverValue_rel], DialogType = "BrushColor";
+			attribute<float32> MSA := mean(GlobCoverValue/MSA_value, GlobCoverValue/LULC_rel);
+		}
+		
+		unit<uint8> World : nrofrows =   1 { attribute<string> Label := 'w'+string(ID(.)); }
+		unit<uint8> Biome : nrofrows = 101 { attribute<string> Label := 'b'+string(ID(.)); }
+		unit<uint8> IMAGE : nrofrows =  29 { attribute<string> Label := 'g'+string(ID(.)); }
+
+		unit<uint32> Deg10_sel := subset(geometry/Deg10/HasLand); // { attribute<string> Label := 'b'+PointRow(nr_OrgEntity)+'_'+PointCol(nr_OrgEntity); }
+		unit<uint32> Deg15_sel := subset(geometry/Deg15/HasLand); // { attribute<string> Label := 'B'+PointRow(nr_OrgEntity)+'_'+PointCol(nr_OrgEntity); }
+		unit<uint8>  Deg10Zone := range(uint8, 0b, uint8(#Deg10_sel)+1b), DialogType = "Map", DialogData = "BaseGrid"
+		{
+			attribute<.> BaseGrid(geometry/Deg10) := value(invert(Deg10_sel/nr_OrgEntity), Deg10Zone);
+			attribute<geometry/Deg10> Deg10_rel := union_data(., Deg10_sel/nr_OrgEntity, point(0s / 0s, 0s / 0s));
+			attribute<string> Label := MakeDefined('b'+string(PointRow(Deg10_rel))+'_'+string(PointCol(Deg10_rel)), 'RestZone');
+			parameter<.> RestZone := uint8(#Deg10_sel);
+		}
+		unit<uint8>  Deg15Zone := range(uint8, 0b, uint8(#Deg15_sel)+1b), DialogType = "Map", DialogData = "BaseGrid"
+		{
+			attribute<.> BaseGrid(geometry/Deg15) := value(invert(Deg15_sel/nr_OrgEntity), Deg15Zone);
+			attribute<geometry/Deg15> Deg15_rel := union_data(., Deg15_sel/nr_OrgEntity, point(0s / 0s, 0s / 0s));
+			attribute<string> Label := MakeDefined('B'+string(PointRow(Deg15_rel))+'_'+string(PointCol(Deg15_rel)), 'RestZone');
+			parameter<.> RestZone := uint8(#Deg15_sel);
+		}
+		
+		unit<uint8> MsaSizeClass : nrofrows = 6
+		{
+			attribute<units/km2> ClassBreak : [ 0   , 1   , 10   , 100   , 1000   , 10000   ];
+			attribute<float32>   MSA        : [ 0.35, 0.45,  0.65,   0.90,    0.98,     1.00];
+		}
+		
+		unit<uint32> FreeUpscaleMethod: nrofrows = 8 {
+			attribute<string> name:  [ 'majority_modus', 'majority_raw', 'majority_rnd', 'free_alloc_raw', 'free_alloc_rnd', 'sample_ul', 'sample_center', 'sample_rnd'];
+			attribute<string> descr: [ 'largest class counts with modus', 'area conservation', 'area + configuration conservation'];
+			
+			attribute<bool> IncludeInExport : [ true, false, true, false, false, false, true, false];
+		}
+		unit<uint32> BalancedUpscaleMethod: nrofrows = 3 {
+			attribute<string> name:  [ 'alloc_raw', 'alloc_rnd', 'alloc_fancy'];
+			attribute<string> descr: [ 'area conservation', 'smear slack''area + configuration conservation'];
+			attribute<bool> IncludeInExport : [ false, true, false];
+		}
+		unit<uint32> Zone: nrofrows = 5 {
+			attribute<string> name:  [ 'IMAGE', 'biome', 'Deg10Zone', 'Deg15Zone', 'world'];
+			attribute<bool> IncludeInExportAsBalanceRegion : [ false, true, false, true , false];
+			attribute<bool> IncludeInExportAsReportRegion  : [ true,  true, false, false,  true ];
+		}
+		unit<uint32> BalancedUpscale:= combine(BalancedUpscaleMethod, Zone)
+		{
+			attribute<string> method_name := BalancedUpscaleMethod/name[nr_1];
+			attribute<string> Zone_name := Zone/name[nr_2];
+			attribute<string> name := method_name + '_' + Zone_name;
+			attribute<bool> IncludeInExport := BalancedUpscaleMethod/IncludeInExport[nr_1] && Zone/IncludeInExportAsBalanceRegion[nr_2];
+		}
+		
+		unit<uint32> Upscale := union_unit(FreeUpscaleMethod, BalancedUpscale)
+		{
+			attribute<string> name := union_data(., FreeUpscaleMethod/name, BalancedUpscale/name);
+			attribute<string> method_name := union_data(., FreeUpscaleMethod/name, BalancedUpscale/method_name);
+			attribute<string> Zone_name := union_data(., const('not applicable', FreeUpscaleMethod), BalancedUpscale/Zone_name);
+			
+			attribute<bool> IncludeInExport := union_data(., FreeUpscaleMethod/IncludeInExport, BalancedUpscale/IncludeInExport);
+		}
+		
+		unit<uint32> AllFactors : nrofrows = 178
+		{
+			attribute<uint32> x := ID(.)+3;
+		}
+		unit<uint32> SomeFactors : nrofrows = 6
+		{
+			attribute<uint32> x : [ 3, 6, 12, 30, 60, 180];
+			attribute<bool> IncludeInExport : [ true, false, false, true, false, true]; 
+		}
+		unit<uint32> Factor := SomeFactors // @USERINPUT: refer to AllFactors or SomeFactors
+		{
+			attribute<string> name := 'x'+String(x);
+		}
+		
+		unit<uint32> case := combine(Factor, Upscale)
+		{
+			attribute<Factor> Factor_rel  := nr_1;
+			attribute<Upscale>Upscale_rel := nr_2;
+			attribute<string> Upscale_name       := Upscale/name[Upscale_rel];
+			attribute<string> UpscaleMethod_name := Upscale/method_name[Upscale_rel];
+			attribute<string> Zone_name          := Upscale/Zone_name[Upscale_rel];
+			attribute<string> Factor_name := Factor/name[Factor_rel];
+			attribute<uint32> Factor_x    := Factor/x[Factor_rel];
+			
+			attribute<string> name :=  Upscale_name + '/' + Factor_name;
+			attribute<bool> IncludeInExport := Upscale/IncludeInExport[Upscale_rel] && Factor/IncludeInExport[Factor_rel];
+		}
+	}
+	
+	container brondata {
+		
+		unit<ipoint> GlobCoverTIFF:
+			StorageName = "%SourceDataDir%/Global/GLOBCOVER_L4_200901_200912_V2.3.tif"
+		,	StorageType = "gdal.grid"
+		,	StorageReadOnly = "true"
+		,	DialogData = "geometry/LatLong"
+		{
+			attribute<classifications/GlobCoverData>  ReadData (geometry/domain);
+			attribute<classifications/GlobCoverValue> GridValue(geometry/domain) := classifications/GlobCoverData/GlobCoverValue_rel[ReadData];
+			attribute<classifications/GlobCoverData>  SampleData (geometry/sample_domain);
+			attribute<classifications/GlobCoverValue> SampleValue(geometry/sample_domain) := classifications/GlobCoverData/GlobCoverValue_rel[SampleData];
+		}
+		attribute<classifications/LULC> LULC_rel(geometry/domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/GridValue];
+		attribute<classifications/LULC> Sample_LULC_rel(geometry/sample_domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/SampleValue];
+		
+		unit<wpoint> biome:
+			StorageName = "%SourceDataDir%/Global/biomes.asc"
+		,	StorageType = "gdal.grid"
+		,	StorageReadOnly = "true"
+		,	DialogData = "geometry/LatLong"
+		{
+			attribute<classifications/Biome> GridData; // max is 99
+		}
+		unit<wpoint> IMAGE:
+			StorageName = "%SourceDataDir%/Global/GREG_5min.asc"
+		,	StorageType = "gdal.grid"
+		,	StorageReadOnly = "true"
+		,	DialogData = "geometry/LatLong"
+		{
+			attribute<classifications/IMAGE> GridData; // max is 27
+		}
+		unit<wpoint> World := IMAGE
+		{
+			attribute<classifications/World> GridData := const(0[classifications/World], World);
+		}
+		container Deg10Zone
+		{
+			attribute<classifications/Deg10Zone> GridData  (geometry/domain       ) := geometry/Deg10/Zone_rel[mapping(geometry/domain, geometry/Deg10)];
+			attribute<classifications/Deg10Zone> SampleData(geometry/sample_domain) := geometry/Deg10/Zone_rel[mapping(geometry/sample_domain, geometry/Deg10)];
+		}
+		container Deg15Zone
+		{
+			attribute<classifications/Deg15Zone> GridData  (geometry/domain       ) := geometry/Deg15/Zone_rel[mapping(geometry/domain, geometry/Deg15)];
+			attribute<classifications/Deg15Zone> SampleData(geometry/sample_domain) := geometry/Deg15/Zone_rel[mapping(geometry/sample_domain, geometry/Deg15)];
+		}
+	}
+	
+	container templates {
+		
+		template FactorData
+		{
+			parameter<uint32> scale_factor;
+			
+			unit<wpoint> block_base := gridset(geometry/domain, point(scale_factor, scale_factor), point(0, 0), wpoint);
+			unit<wpoint> block := TiledUnit(point(1024w, 1024w, block_base))
+			{
+				attribute<geometry/domain> domain_rel_ul   := mapping(block, geometry/domain);
+				attribute<geometry/domain> domain_rel_ct   :=domain_rel_ul + point(int32(scale_factor / 2), int32(scale_factor / 2));
+				attribute<geometry/domain> domain_rel_rnd  :=domain_rel_ul + point(int32(rnd_uniform(0, block, range(uint32,0, scale_factor))), int32(rnd_uniform(1, block, range(uint32,0, scale_factor))));
+				
+				attribute<block> base_grid(geometry/domain) := mapping(geometry/domain, block);
+				
+				attribute<classifications/LULC> sample_ul := brondata/LULC_rel[domain_rel_ul ];
+				attribute<classifications/LULC> sample_ct := brondata/LULC_rel[domain_rel_ct ];
+				attribute<classifications/LULC> sample_rnd:= brondata/LULC_rel[domain_rel_rnd]; // 2:40[min] voor /Factors/x180/block/sample_ul
+				
+				attribute<classifications/world> world_rel:=const(0[classifications/world], block);
+				attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[domain_rel_ct[brondata/biome]], uint8(#classifications/biome -1));
+				attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/GridData[domain_rel_ct[brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
+				attribute<classifications/Deg10Zone> Deg10Zone_rel := brondata/Deg10Zone/GridData[domain_rel_ct];
+				attribute<classifications/Deg15Zone> Deg15Zone_rel := brondata/Deg15Zone/GridData[domain_rel_ct];
+				
+				parameter<units/km> heightP :=  Float32(abs(PointRow(GetProjectionFactor(block)))) * 40000[units/km] / 360f;
+				
+				unit<uint16> rowset := range(uint16, pointrow(Lowerbound(block)), pointrow(Upperbound(block)))
+				{
+					attribute<float64> lat_top := pointrow( point(ID(rowset), const(0w, rowset), block)[geometry/LatLong] );
+					attribute<float64> lat_mid := lat_top  + 0.5 * pointrow(getprojectionfactor(block)[geometry/LatLong]);
+					attribute<Float32> lat_factor := Float32( cos(lat_mid * 2d*pi() / 360d ) );
+					attribute<units/km> width := lat_factor * heightP;
+				}
+				attribute<rowset> row  := pointrow(ID(block));
+				attribute<Float32> lat_factor := rowset/lat_factor[row];
+				
+				attribute<units/km> height :=  const(heightP, block);
+				attribute<units/km> width  :=  rowset/width[row];
+				attribute<units/km2> area  := lat_factor * sqr(HeightP);
+				
+				attribute<bool> is_trivial := all(brondata/LULC_rel == sample_ul[base_grid], base_grid);
+				// 02:22:54 [hr] voor /Factors/x180/block/is_trivial
+				// 158627 blocks (71) are trivial, 64573 (29%) not 
+			
+				attribute<classifications/LULC> trivial_result := trivial_block/LULC[trivial_block/block_grid];
+			}
+			unit<uint32> trivial_block:= subset(block/is_trivial), DialogType = "Map", DialogData = "block_grid"
+			{
+				attribute<block> block_rel := nr_OrgEntity;
+				attribute<classifications/LULC> LULC := block/sample_ul[block_rel];
+				attribute<.> block_grid(block) := invert(block_rel);
+			}
+			unit<uint32> non_trivial_block:= subset(not(block/is_trivial)), DialogType = "Map", DialogData = "block_grid"
+			{
+				attribute<block> block_rel := nr_OrgEntity;
+				attribute<.> block_grid(block) := invert(block_rel);
+				container zones
+				{
+					attribute<classifications/world> world(..) := const(0[classifications/world], block);
+					attribute<classifications/biome> biome(..) := MakeDefined(brondata/biome/GridData[block/domain_rel_ct[block_rel][brondata/biome]], uint8(#classifications/biome -1));
+					attribute<classifications/IMAGE> IMAGE(..) := MakeDefined(brondata/IMAGE/GridData[block/domain_rel_ct[block_rel][brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
+					attribute<classifications/Deg10Zone> Deg10Zone(..) := geometry/Deg10/Zone_rel[mapping(block, geometry/Deg10)[block_rel]];
+					attribute<classifications/Deg15Zone> Deg15Zone(..) := geometry/Deg15/Zone_rel[mapping(block, geometry/Deg15)[block_rel]];
+				}
+				container counts := reg_count_uint16(non_trivial_cell/LULC_rel, classifications/LULC/label, non_trivial_cell, const('non_trivial_block_rel', classifications/LULC) );
+				container Suitabilities_raw := 
+					for_each_nedv(classifications/LULC/label, 
+						'int32(counts/'+classifications/LULC/label+')',
+						non_trivial_block, int32
+					);
+				container Suitabilities_rnd := 
+					for_each_nedv(classifications/LULC/label, 
+						'Suitabilities_raw/'+classifications/LULC/label+'*1000i + int32(rnd_uniform('+String(ID(classifications/LULC))+',non_trivial_block,range(uint32, 0, 1000)))',
+						non_trivial_block, int32
+					);
+				container Suitabilities_fancy := Suitabilities_rnd; // TODO: extra suitability factors
+			}
+			unit<uint64> non_trivial_cell := subset(not(block/is_trivial[block/base_grid]))
+			{
+				attribute<geometry/domain> domain_rel := nr_OrgEntity;
+				attribute<classifications/LULC> LULC_rel := brondata/LULC_rel[domain_rel]; // 2:40[min] voor /Factors/x180/block/sample_ul
+				attribute<block> block_rel := block/base_grid[domain_rel];
+				attribute<non_trivial_block> non_trivial_block_rel := invert(non_trivial_block/block_rel)[block_rel];
+				
+			}
+		}
+		template case
+		{
+			parameter<string> UpscaleMethod_name;
+			parameter<string> Upscale_name;
+			parameter<string> Zone_name;
+			container FactorData;
+			
+			unit<wpoint> block := FactorData/block;
+			
+			parameter<string> CaseExportFolder := '%projdir%/results/'+Upscale_name+'/x'+string(FactorData/scale_factor);
+			
+			container aggr := ='upscale_methods/'+UpscaleMethod_name+'(FactorData)';
+			attribute<classifications/LULC> LULC_rel(block) := MakeDefined(aggr/non_trivial_result[FactorData/non_trivial_block/block_grid], FactorData/block/trivial_result), FreeData = "False";
+			
+			container indicators := indicator(block, LULC_rel);
+		}
+		template indicator
+		{
+			unit<wpoint> block;
+			attribute<classifications/LULC> LULC_rel(block);
+			
+			attribute<float32> NEPO(block) := ='merge(LULC_rel, float32, '+AsItemList(replace(' potential(Float32(LULC_rel == @LULC@[uint8]), geometry/NEPO_kernel/Weight)', '@LULC@', string(ID(classifications/LULC))))+')';
+			attribute<uint8>   NEDV(block) := diversity(LULC_rel, 10w, 1w); // diversity in a circle with radius 10.
+			
+			container ZoneTypes := 
+				for_each_ne(
+					classifications/Zone/name
+				,	'zonal_indicators('
+						'block, '
+						+Quote(classifications/Zone/name)+', '
+						'LULC_rel'
+					')'
+				);
+			parameter<string> GenerateFiles := ='add('+AsItemList(classifications/Zone/IncludeInExportAsReportRegion ? 'ZoneTypes/'+classifications/Zone/name+'/GenerateFiles' : '')+')';
+		}
+		
+		template zonal_indicators
+		{
+			unit<wpoint> block;
+			parameter<string> ZonesName;
+			attribute<classifications/LULC> LULC_rel(block);
+			
+			unit<uint8> zone := ='classifications/'+ZonesName;
+			unit<uint32> zone_u32 := range(zone, 0, #zone) { attribute<string> Label := union_data(., zone/label); }
+			attribute<zone> zone_rel(block) := ='block/'+ZonesName+'_rel';
+			
+			unit<uint32> zonal_LULC := combine(zone, classifications/LULC)
+			{
+				attribute<string> label := zone/label[nr_1]+': '+classifications/LULC/label[nr_2];
+				attribute<.> base_grid(block) := combine_data(., zone_rel, LULC_rel);
+			}
+			
+			parameter<string> ExportFolder := CaseExportFolder +'/'+ZonesName;
+			
+			container classlevel {
+				attribute<uint32>    count(zonal_LULC) := pcount(zonal_LULC/base_grid);
+				attribute<units/km2> CA   (zonal_LULC) := sum(block/area, zonal_LULC/base_grid);
+				attribute<float32>   PLAND(zonal_LULC) := CA / sum(CA, zonal_LULC/nr_1)[zonal_LULC/nr_1]; // proportion of each class within its zone
+				
+				container NEPO_stats := block_statistics(block, zonal_LULC, zonal_LULC/base_grid, NEPO, ExportFolder+'/class_NEPO.csv');
+				container NEDV_stats := block_statistics(block, zonal_LULC, zonal_LULC/base_grid, float32(NEDV), ExportFolder+'/class_NEDV.csv');
+				
+				parameter<string> Export := 'zone;LULC;count;CA;PLAND\n'+
+					AsList(
+						MakeDefined(zone/label[zonal_LULC/nr_1], 'Undefined')+';'+
+						MakeDefined(classifications/LULC/label[zonal_LULC/nr_2], 'Undefined')+';'+
+						string(count)+';'+
+						string(CA)+';'+
+						MakeDefined(string(PLAND), '')
+					,'\n')
+				,	StorageType = "str"
+				,	StorageName = "=ExportFolder+'/class_base.csv'";
+				parameter<string> GenerateFiles := ExportFolder+'/class_*.csv\n', 
+					ExplicitSuppliers = "Export;NEPO_stats/Export;NEDV_stats/Export";
+			}
+			container zonelevel {
+				attribute<uint32> count(zone) := pcount(zone_rel);
+				attribute<units/km2> CA(zone) := sum(block/area, zone_rel);
+				
+				attribute<uint8>   PR (zone) := sum(uint8(classlevel/count > 0), zonal_LULC/nr_1); // patch richness, is independent of patcher as it only depends on the occurence of each LULC
+				attribute<float32> PRD(zone) := float32(PR) / CA; // patch richness density
+				
+				container NEPO_stats := block_statistics(block, zone_u32, zone_rel[zone_u32], NEPO, ExportFolder+'/zone_NEPO.csv');
+				container NEDV_stats := block_statistics(block, zone_u32, zone_rel[zone_u32], float32(NEDV), ExportFolder+'/zone_NEDV.csv');
+				// diversity measures per zone
+				container AreaDiversity := zonal_diversity(zonal_LULC, classlevel/CA, zone, ExportFolder+'/zone_area_div.csv');
+				
+				parameter<string> Export := 'zone;count;CA;PR;PRD\n'+
+					AsList(
+						zone/label+';'+
+						string(count)+';'+
+						string(CA)   +';'+
+						string(PR)   +';'+
+						MakeDefined(string(PRD), '')
+					,'\n')
+				,	StorageType = "str"
+				,	StorageName = "=ExportFolder+'/zone_base.csv'";
+				
+				parameter<string> GenerateFiles := ExportFolder+'/zone_*.csv\n', 
+					ExplicitSuppliers = "Export;NEPO_stats/Export;NEDV_stats/Export;AreaDiversity/Export";
+			}
+			
+			container p4 := patcher(block, zonal_LULC, zone, 'district_4', 'p4');
+			container p8 := patcher(block, zonal_LULC, zone, 'district_8', 'p8');
+			
+			parameter<string> GenerateFiles := classlevel/GenerateFiles+zonelevel/GenerateFiles+p4/GenerateFiles+p8/GenerateFiles;
+		}
+		
+		template block_statistics
+		{
+			unit<wpoint> block;
+			unit<uint32>  group;
+			attribute<group> group_rel  (block);
+			attribute<float32> indicator(block);
+			parameter<string> Export_FileName;
+			
+			attribute<float32> mn_block(group) := mean       (indicator, group_rel);
+			attribute<float32> me_block(group) := rth_element(indicator, 0.5f, group_rel);
+			attribute<float32> cv_block(group) := sd         (indicator, group_rel);
+			
+			parameter<string> Export := 'label;mn;me;cv\n'+
+				AsList(
+					group/label+';'+
+					MakeDefined(string(mn_block),'')+';'+
+					MakeDefined(string(me_block),'')+';'+
+					MakeDefined(string(cv_block),'')
+				,'\n')
+			,	StorageType = "str"
+			,	StorageName = "=Export_FileName";
+		}
+		template patcher
+		{
+			unit<wpoint> block;
+			unit<uint32>  zonal_LULC;
+			unit<uint8> zone;
+			parameter<string> DistrOper;
+			parameter<string> DistrCode;
+			
+			unit<uint32> patch := =DistrOper+'(zonal_LULC/base_grid)', DialogType = "Map", DialogData = "Districts" // uses 4 neighbour rule
+			{
+ 				attribute<zonal_LULC>           zonal_LULC_rel := zonal_LULC/base_grid[invert(Districts)];
+ 				attribute<classifications/LULC> LULC_rel := zonal_LULC/nr_2[zonal_LULC_rel];
+ 				attribute<zone>                 zone_rel := zonal_LULC/nr_1[zonal_LULC_rel];
+ 				
+				attribute<uint32>    CELL_COUNT  := pcount   (Districts);
+ 				attribute<uint32>    PERIM_COUNT := perimeter(Districts);
+				attribute<units/km2> PA    := sum(block/area, Districts); // patch area
+ 				attribute<units/km>  PERIM := perimeter_weighted(Districts, block/width, block/height, block/width, block/height);
+ 				attribute<float32>   FRAC  := 2.0f * log(0.25f * 1000[units/meter / units/km] * float32(PERIM)) / log(float32(PA) * 1000000[units/meter2 / units/km2]);
+ 				attribute<float32>   SHAPE := 0.25f * float32(PERIM) / Sqrt(float32(PA));
+ 				
+ 				attribute<float32>   MSA_SIZE := classifications/MsaSizeClass/MSA[ classify(PA, classifications/MsaSizeClass/ClassBreak) ];
+ 				attribute<float32>   MSA_LULC := classifications/LULC/MSA[LULC_rel];
+ 				attribute<float32>   MSA      := MSA_SIZE * MSA_LULC;
+			}
+			
+			container classlevel {
+				attribute<uint32>  NP(zonal_LULC) := pcount(patch/zonal_LULC_rel);
+				attribute<float32> PD(zonal_LULC) := float32(NP) / .../classlevel/CA;
+				attribute<float32> TE(zonal_LULC) := sum(patch/PERIM, patch/zonal_LULC_rel);
+				attribute<float32> ED(zonal_LULC) := TE / .../classlevel/CA;
+				
+				parameter<string> FileNameBase := ExportFolder+'/class_'+DistrCode;
+				
+				container PA    := patch_statistics(patch, zonal_LULC, patch/zonal_LULC_rel, patch/PA   , FileNameBase+'_PA.csv');
+				container FRAC  := patch_statistics(patch, zonal_LULC, patch/zonal_LULC_rel, patch/FRAC , FileNameBase+'_FRAC.csv');
+				container SHAPE := patch_statistics(patch, zonal_LULC, patch/zonal_LULC_rel, patch/SHAPE, FileNameBase+'_SHAPE.csv');
+				container MSA   := patch_statistics(patch, zonal_LULC, patch/zonal_LULC_rel, patch/MSA  , FileNameBase+'_MSA.csv');
+				
+				parameter<string> Export := 'zone;LULC;NP;PD;TE;ED\n'+
+					AsList(
+						MakeDefined(zone/label[zonal_LULC/nr_1], 'Undefined')+';'+
+						MakeDefined(classifications/LULC/label[zonal_LULC/nr_2], 'Undefined')+';'+
+						MakeDefined(string(NP),'')+';'+
+						MakeDefined(string(PD),'')+';'+
+						MakeDefined(string(TE),'')+';'+
+						MakeDefined(string(ED),'')
+					,'\n')
+				,	StorageType = "str"
+				,	StorageName = "=ExportFolder+'/class_'+DistrCode+'_base.csv'";
+				parameter<string> GenerateFiles := FileNameBase+'_*.csv\n',
+					ExplicitSuppliers = "Export;PA/Export;FRAC/Export;SHAPE/Export;MSA/Export";
+			}
+			container zonelevel {
+				attribute<uint32>  NP(zone) := pcount(patch/zone_rel);
+				attribute<float32> PD(zone) := float32(NP) / .../zonelevel/CA;
+				attribute<float32> TE(zone) := sum(patch/PERIM, patch/zone_rel);
+				attribute<float32> ED(zone) := TE / .../zonelevel/CA;
+				
+				parameter<string> FileNameBase := ExportFolder+'/zone_'+DistrCode;
+				
+				container PA    := patch_statistics(patch, zone_u32, patch/zone_rel[zone_u32], patch/PA   , FileNameBase+'_PA.csv');
+				container FRAC  := patch_statistics(patch, zone_u32, patch/zone_rel[zone_u32], patch/FRAC , FileNameBase+'_FRAC.csv');
+				container SHAPE := patch_statistics(patch, zone_u32, patch/zone_rel[zone_u32], patch/SHAPE, FileNameBase+'_SHAPE.csv');
+				container MSA   := patch_statistics(patch, zone_u32, patch/zone_rel[zone_u32], patch/MSA  , FileNameBase+'_MSA.csv');
+				container PatchDiversity := zonal_diversity(zonal_LULC, float32(classlevel/NP), zone, FileNameBase+'_div.csv');
+				
+				parameter<string> Export := 'zone;NP;PD;TE;ED\n'+
+					AsList(
+						zone/label+';'+
+						MakeDefined(string(NP),'')+';'+
+						MakeDefined(string(PD),'')+';'+
+						MakeDefined(string(TE),'')+';'+
+						MakeDefined(string(ED),'')
+					,'\n')
+				,	StorageType = "str"
+				,	StorageName = "=ExportFolder+'/zone_'+DistrCode+'_base.csv'";
+				
+				parameter<string> GenerateFiles := FileNameBase+'_*.csv\n',
+					ExplicitSuppliers = "Export;PA/Export;FRAC/Export;SHAPE/Export;MSA/Export;PatchDiversity/Export";
+			}
+			
+			parameter<string> GenerateFiles := classlevel/GenerateFiles+zonelevel/GenerateFiles;
+		}
+		
+		template patch_statistics
+		{
+			unit<uint32> PatchSet;
+			unit<uint32>  group;
+			attribute<group> group_rel(PatchSet);
+			attribute<float32> indicator(PatchSet);
+			parameter<string> Export_FileName;
+			
+			attribute<float32> mn_patch(group) := mean       (indicator, group_rel);
+			attribute<float32> me_patch(group) := rth_element(indicator, 0.5f, group_rel);
+			attribute<float32> cv_patch(group) := sd         (indicator, group_rel);
+			
+			attribute<float32> mn_block(group) := sum(indicator * PatchSet/PA, group_rel) / sum(PatchSet/PA, group_rel);
+			attribute<float32> me_block(group) := nth_element_weighted(indicator, 0.5f * sum(PatchSet/PA, group_rel), PatchSet/PA, group_rel);
+			attribute<float32> cv_block(group) := Sqrt(sum(sqr(indicator - mn_block[group_rel])*PatchSet/PA, group_rel) / sum(PatchSet/PA, group_rel));
+			
+			parameter<string> Export := 'label;mnp;mep;cvp;mnb;meb;cvb\n'+
+				AsList(
+					MakeDefined(group/label, 'Undefined')+';'+
+					MakeDefined(string(mn_patch),'')+';'+
+					MakeDefined(string(me_patch),'')+';'+
+					MakeDefined(string(cv_patch),'')+';'+
+					MakeDefined(string(mn_block),'')+';'+
+					MakeDefined(string(me_block),'')+';'+
+					MakeDefined(string(cv_block),'')
+				,'\n')
+			,	StorageType = "str"
+			,	StorageName = "=Export_FileName";
+		}
+		
+		template zonal_diversity 
+		{
+			unit<uint32>  zonal_LULC;
+			attribute<float32> Size(zonal_LULC); // measure parameter for abundance of each LULC in each zone.
+			unit<uint8>  zone;
+			parameter<string> Export_FileName;
+			
+			attribute<float32> PAZ(zonal_LULC) := Size / sum(Size, zonal_LULC/nr_1)[zonal_LULC/nr_1]; // proportional abundance within each zone
+			
+			// Shannon Information Measure
+			attribute<float32> SIM_component(zonal_LULC) := PAZ > 0f ? PAZ * -log(PAZ) : 0f;
+			attribute<float32> SIM(zone) := ='add('+AsItemList('SIM_component[combine_data(zonal_LULC, ID(zone), '+String(ID(classifications/LULC))+'[classifications/LULC])]')+')';
+			attribute<float32> SIM_N(zone) :=SIM / log(float32(#classifications/LULC)); // SIM normalized to 1 for the maximum entropy case.
+			
+			// Simpson's diversity index
+			// This measure is also known in ecology as the probability of interspecific encounter (PIE) and the Gini–Simpson index.
+			attribute<float32> SI_component(zonal_LULC) := PAZ * PAZ;
+			attribute<float32> SI(zone) := ='add('+AsItemList('SI_component[combine_data(zonal_LULC, ID(zone), '+String(ID(classifications/LULC))+'[classifications/LULC])]')+')';
+			attribute<float32> SIDI(zone) := 1f - SI;
+			attribute<float32> SIEI(zone) := 1f - SI / log(float32(#classifications/LULC)); // really?
+			
+			parameter<string> Export := 'zone;SIM;SIM_N;SI;SIDI;SIEI\n'+
+				AsList(
+					MakeDefined(zone/label, 'Undefined')+';'+
+					MakeDefined(string(SIM),'')+';'+
+					MakeDefined(string(SIM_N),'')+';'+
+					MakeDefined(string(SI),'')+';'+
+					MakeDefined(string(SIDI),'')+';'+
+					MakeDefined(string(SIEI),'')
+				,'\n')
+			,	StorageType = "str"
+			,	StorageName = "=Export_FileName";
+		}
+
+		// =================================================== specific upscale methods
+		
+		container upscale_methods 
+		{
+			template majority_modus
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := modus(FactorData/non_trivial_cell/LULC_rel, FactorData/non_trivial_cell/non_trivial_block_rel);
+			}
+			template majority_raw
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := ='convert(argmax('+AsItemList('non_trivial_block/counts/'+classifications/LULC/label)+'),classifications/LULC)';
+			}
+			template majority_rnd
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := ='convert(argmax('+AsItemList('non_trivial_block/Suitabilities_rnd/'+classifications/LULC/label)+'),classifications/LULC)';
+			}
+			template free_alloc
+			{
+				container FactorData;
+				container Suitabilities;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				
+				unit <uint8> SingleZone := classifications/world
+				{
+					attribute<.> world := ID(.);
+				}
+				unit <uint8> partitioning: nrofrows = 1
+				{
+					attribute<string>  name : ['world'];
+				}
+				container MinClaims := for_each_nedv(classifications/LULC/label, 'const(0, SingleZone)', SingleZone, UInt32);
+				container MaxClaims := for_each_nedv(classifications/LULC/label, 'const(4000000000, SingleZone)', SingleZone, UInt32);
+				
+				container alloc := 
+					discrete_alloc(
+						classifications/LULC/label
+					,	non_trivial_block
+					,	Suitabilities
+					,	const(0[partitioning], classifications/LULC)
+					,	partitioning/name
+					,	SingleZone // AtomicRegions
+					,	const(0[SingleZone], non_trivial_block) // AtomicRegionMap
+					,	MinClaims, MaxClaims
+					,	0i
+					,	MinClaims
+					);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := alloc/landuse;
+			}
+			template free_alloc_raw
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				container impl := free_alloc(FactorData, non_trivial_block/Suitabilities_raw);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := impl/non_trivial_result;
+			}
+			template free_alloc_rnd
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				container impl := free_alloc(FactorData, non_trivial_block/Suitabilities_rnd);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := impl/non_trivial_result;
+			}
+			template free_alloc_fancy
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				container impl := free_alloc(FactorData, non_trivial_block/Suitabilities_fancy);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := impl/non_trivial_result;
+			}
+			template sample_ul
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := FactorData/block/sample_ul[non_trivial_block/block_rel];
+			}
+			template sample_center
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := FactorData/block/sample_ct[non_trivial_block/block_rel];
+			}
+			template sample_rnd
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := FactorData/block/sample_rnd[non_trivial_block/block_rel];
+			}
+			
+			template alloc_impl
+			{
+				container FactorData;
+				container suitabilities;
+				
+				unit<uint8> zone := ='classifications/'+Zone_name
+				{
+					attribute<.> zone_rel(.) := ID(.);
+				}
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block
+				{
+					attribute<uint8> zone_rel := ='zones/'+Zone_name;
+				}
+				unit <uint8> partitioning: nrofrows = 1
+				{
+					attribute<string>  name : [ 'zone_rel' ];
+				}
+				container counts := for_each_nedv(classifications/LULC/label, 'sum(uint32(non_trivial_block/counts/'+classifications/LULC/label+'), non_trivial_block/zone_rel)', zone, UInt32);
+				container MinClaims := for_each_nedv(classifications/LULC/label, ' counts/'+classifications/LULC/label+' / Sqr(FactorData/scale_factor)', zone, UInt32);
+				container MaxClaims := for_each_nedv(classifications/LULC/label, '(counts/'+classifications/LULC/label+'+ Sqr(FactorData/scale_factor)-1)/ Sqr(FactorData/scale_factor)', zone, UInt32);
+				
+				container alloc := 
+					discrete_alloc(
+						classifications/LULC/label
+					,	non_trivial_block
+					,	Suitabilities
+					,	const(0[partitioning], classifications/LULC)
+					,	partitioning/name
+					,	zone // AtomicRegions
+					,	non_trivial_block/zone_rel // AtomicRegionMap
+					,	MinClaims, MaxClaims
+					,	0i
+					,	MinClaims
+					);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := alloc/landuse;
+			}
+			
+			template alloc_raw
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				container impl := alloc_impl(FactorData, non_trivial_block/Suitabilities_raw);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := impl/non_trivial_result;
+			}
+			
+			template alloc_rnd
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				container impl := alloc_impl(FactorData, non_trivial_block/Suitabilities_rnd);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := impl/non_trivial_result;
+			}
+			
+			template alloc_fancy
+			{
+				container FactorData;
+				
+				unit<uint32> non_trivial_block := FactorData/non_trivial_block;
+				container impl := alloc_impl(FactorData, non_trivial_block/Suitabilities_fancy);
+				
+				attribute<classifications/LULC> non_trivial_result(non_trivial_block) := impl/non_trivial_result;
+			}
+		}
+	}
+	
+	container Factors := for_each_ne(classifications/Factor/name, 'templates/FactorData('+String(classifications/Factor/x)+')');
+	
+	// indicatoren voor basisdata zonder upscaling
+	container SourceResolutionSample
+	{
+		unit<wpoint> sd := geometry/sample_domain // TODO: samenvoegen met schema voor Factors, onderdeel block, waaruit hulpmiddelen voor aggregatie apart gezet moeten worden.
+		{
+			attribute<classifications/world> world_rel:=const(0[classifications/world], sd);
+			attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[mapping(sd,brondata/biome)], uint8(#classifications/biome -1));
+			attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/GridData[mapping(sd,brondata/IMAGE)], uint8(#classifications/IMAGE- 1));
+			attribute<classifications/Deg10Zone> Deg10Zone_rel := brondata/Deg10Zone/SampleData;
+			attribute<classifications/Deg15Zone> Deg15Zone_rel := brondata/Deg15Zone/SampleData;
+			
+			parameter<units/km> heightP :=  Float32(abs(PointRow(GetProjectionFactor(sd)))) * 40000[units/km] / 360f;
+			
+			unit<uint16> rowset := range(uint16, pointrow(Lowerbound(sd)), pointrow(Upperbound(sd)))
+			{
+				attribute<float64> lat_top := pointrow( point(ID(rowset), const(0w, rowset), sd)[geometry/LatLong] );
+				attribute<float64> lat_mid := lat_top  + 0.5 * pointrow(getprojectionfactor(sd)[geometry/LatLong]);
+				attribute<Float32> lat_factor := Float32( cos(lat_mid * 2d*pi() / 360d ) );
+				attribute<units/km> width := lat_factor * heightP;
+			}
+			attribute<rowset> row  := pointrow(ID(sd));
+			attribute<Float32> lat_factor := rowset/lat_factor[row];
+			
+			attribute<units/km> height :=  const(heightP, sd);
+			attribute<units/km> width  :=  rowset/width[row];
+			attribute<units/km2> area  := lat_factor * sqr(HeightP);
+		}
+		parameter<string> CaseExportFolder := '%projDir%/results/SourceResolutionSample';
+		container indicators := templates/indicator(sd, brondata/sample_LULC_rel);
+	}
+	
+	container results := 
+		for_each_ne(classifications/case/name, 
+			'templates/case('
+				+Quote(classifications/case/UpscaleMethod_name)+','
+				+Quote(classifications/case/Upscale_name)+','
+				+Quote(classifications/case/Zone_name)+','
+				+'Factors/'+classifications/case/Factor_name+
+			')'
+		);
+		
+	parameter<string> GenerateFiles := 
+		=	Quote('Filename\n')
+			+	'+add('
+			+		AsItemList(
+						classifications/case/InCludeInExport 
+						?	'results/'+classifications/case/name+'/indicators/GenerateFiles' 
+						:	''
+					)
+			+		',SourceResolutionSample/indicators/GenerateFiles'
+			+	')'
+		,	StorageType = "str"
+		,	StorageName = "%projdir%/results/filelist.csv";
+}

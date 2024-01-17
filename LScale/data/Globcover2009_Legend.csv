@@ -1,0 +1,24 @@
+"Value";"Label";"MSA";;"Red";"Green";"Blue";"LULC_index"
+11;"Post-flooding or irrigated croplands (or aquatic)";0,05;;170;240;240;0
+14;"Rainfed croplands";0,1;;255;255;100;0
+20;"Mosaic cropland (50-70%) / vegetation (grassland/shrubland/forest) (20-50%)";0,46;"60% crop";220;240;100;0
+30;"Mosaic vegetation (grassland/shrubland/forest) (50-70%) / cropland (20-50%) ";0,685;"35% crop";205;205;102;0
+40;"Closed to open (>15%) broadleaved evergreen or semi-deciduous forest (>5m)";1;;0;100;0;1
+50;"Closed (>40%) broadleaved deciduous forest (>5m)";1;;0;160;0;1
+60;"Open (15-40%) broadleaved deciduous forest/woodland (>5m)";1;;170;200;0;1
+70;"Closed (>40%) needleleaved evergreen forest (>5m)";1;;0;60;0;1
+90;"Open (15-40%) needleleaved deciduous or evergreen forest (>5m)";1;;40;100;0;1
+100;"Closed to open (>15%) mixed broadleaved and needleleaved forest (>5m)";1;;120;130;0;1
+110;"Mosaic forest or shrubland (50-70%) / grassland (20-50%)";1;;140;160;0;1
+120;"Mosaic grassland (50-70%) / forest or shrubland (20-50%) ";1;;190;150;0;2
+130;"Closed to open (>15%) (broadleaved or needleleaved, evergreen or deciduous) shrubland (<5m)";1;;150;100;0;3
+140;"Closed to open (>15%) herbaceous vegetation (grassland, savannas or lichens/mosses)";1;;255;180;50;3
+150;"Sparse (<15%) vegetation";1;;255;235;175;3
+160;"Closed to open (>15%) broadleaved forest regularly flooded (semi-permanently or temporarily) - Fresh or brackish water";1;;0;120;90;4
+170;"Closed (>40%) broadleaved forest or shrubland permanently flooded - Saline or brackish water";1;;0;150;120;4
+180;"Closed to open (>15%) grassland or woody vegetation on regularly flooded or waterlogged soil - Fresh, brackish or saline water";1;;0;220;130;4
+190;"Artificial surfaces and associated areas (Urban areas >50%)";0,05;;195;20;0;5
+200;"Bare areas";1;;255;245;215;6
+210;"Water bodies";1;;0;70;200;7
+220;"Permanent snow and ice";1;;255;255;255;6
+230;"No data (burnt areas, clouds,…)";1;;0;0;0;8

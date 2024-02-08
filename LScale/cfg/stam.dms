@@ -19,25 +19,45 @@ container LandScale: FreeData = "True"
 			attribute<Float32> Weight := scalesum(1f/sqrt(float32(SqrDst+1)), 1.0f);
 		}
 
-		parameter<LatLong> StudyArea_SouthWest := point(00.0, -15.0, geometry/LatLong); //  @@USERINPUT, sort of SW of Europe
-		parameter<LatLong> StudyArea_NorthEast := point(60.0,  75.0, geometry/LatLong); //  @@USERINPUT, sort of NE of Europe
-//		parameter<LatLong> StudyArea_SouthWest := point(60.0, -15.0, geometry/LatLong); //  @@USERINPUT, Iceland?
-//		parameter<LatLong> StudyArea_NorthEast := point(90.0,  45.0, geometry/LatLong); //  @@USERINPUT, North pole above Nova Zembla?
+		parameter<LatLong> StudyArea_SouthWest := point_xy(00.0, -15.0, geometry/LatLong); //  @@USERINPUT, sort of SW of Europe
+		parameter<LatLong> StudyArea_NorthEast := point_xy(60.0,  75.0, geometry/LatLong); //  @@USERINPUT, sort of NE of Europe
+//		parameter<LatLong> StudyArea_SouthWest := point_xy(60.0, -15.0, geometry/LatLong); //  @@USERINPUT, Iceland?
+//		parameter<LatLong> StudyArea_NorthEast := point_xy(90.0,  45.0, geometry/LatLong); //  @@USERINPUT, North pole above Nova Zembla?
 		unit<ipoint> SelectedStudyArea := 
 			range(brondata/GlobCoverTIFF, 
 				StudyArea_SouthWest[brondata/GlobCoverTIFF],
 				StudyArea_NorthEast[brondata/GlobCoverTIFF]
 			);
 
+		container study_areas
+		{
+			parameter<float64> offset05secs :=  5.0 / 3600.0;
+			parameter<float64> offset10secs := 10.0 / 3600.0;
+			parameter<float64> offset11secs := 11.0 / 3600.0;
+			parameter<float64> offset09secs :=  9.0 / 3600.0;
+			
+			parameter<LatLong> lower_bound := LowerBound(brondata/GlobCoverTIFF)[LatLong];
+			//parameter<float64> offset := Iceland lower_bound  point_yx(180.0, 180.0, );
+			
+			unit<ipoint> Europe  := range(brondata/GlobCoverTIFF
+			, point_xy(-12.0+offset05secs, 30.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
+			, point_xy(45.0+offset05secs, 70.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
+			
+			unit<ipoint> Iceland := range(brondata/GlobCoverTIFF
+			, point_xy(-30.0+offset05secs, 60.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
+			, point_xy(  0.0+offset05secs, 75.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
+		}
+
 		// StudyArea, the area for which aggregations are made (with integer scale factors >= 2); can be all of the world.
 		// TODO: allow for processing a range of StudyAreas
-		unit<ipoint> StudyArea := brondata/GlobCoverTIFF; // @@USERINPUT: Choose all of GlobCoverTIFF
-//		unit<ipoint> StudyArea := SelectedStudyArea;      // @@USERINPUT: Choose a selection as specified below.
+		unit<ipoint> StudyArea := study_areas/Europe; //Iceland;
+		//unit<ipoint> StudyArea := brondata/GlobCoverTIFF; // @@USERINPUT: Choose all of GlobCoverTIFF
+		//unit<ipoint> StudyArea := SelectedStudyArea;      // @@USERINPUT: Choose a selection as specified below.
 		
-		unit<ipoint> domain := TiledUnit(point(256i, 129600i, StudyArea));
+		unit<ipoint> domain := StudyArea;// TiledUnit(point_yx(256i, 129600i, StudyArea)); // To be considered: could also be 180x180 to line up with scale factor
 		
 		// ====== SampleArea for with the indicators are calculated without aggregation
-		// cannot be larger than 2^16 pixes wide, which is approx. 180 Degrees as 1 pixes is 10 arcsecs.
+		// cannot be larger than 2^16 pixels wide, which is approx. 180 Degrees as 1 pixes is 10 arcsecs.
 		// TODO: allow for processing a range of SampleAreas
 		
 		parameter<LatLong> SampleArea_NorthWest := point(60.0, -10.0, geometry/LatLong); //  @@USERINPUT
@@ -74,7 +94,7 @@ container LandScale: FreeData = "True"
 	container classifications
 	{
 		unit<uint8> GlobCoverValue
-		:	StorageName = "%ProjDir%/data/Globcover2009_Legend.csv"
+		:	StorageName = "%ProjDir%/data/ESACCI_legend.csv"
 		,	StorageType = "gdal.vect"
 		,	StorageReadOnly = "true"
 		{
@@ -82,19 +102,33 @@ container LandScale: FreeData = "True"
 			attribute<float32> MSA_value := float32(replace(MSA,',','.'));
 			attribute<LULC> LULC_rel := convert(LULC_index, LULC);
 		}
+		
 		unit<uint8> GlobCoverData
 		{
 			attribute<GlobCoverValue> GlobCoverValue_rel := invert(uint8(GlobCoverValue/Value)[GlobCoverData]);
+			attribute<uint32> Color := GlobCoverValue/Color[GlobCoverValue_rel], DialogType = "BrushColor";
+			attribute<String> Label := GlobCoverValue/Label[GlobCoverValue_rel];
 		}
 		
-		unit<uint8> LULC : nrofrows = 9 // @USERINPUT@ Could be read from a .csv file as well; if defined here, nrofrows must correspond with the element counts of the following attributes.
+		unit<uint8> LULC := GlobCoverValue
+		{
+			attribute<string> Label := GlobCoverValue/Label;
+			attribute<bool>   IsLand := Label != 'Water_bodies';
+			attribute<GlobCoverValue> GlobCoverValue_rel := invert(GlobCoverValue/LULC_rel); // indicates for each LULC the last GlobCoverValue that refers to it
+			attribute<uint32> Color := GlobCoverValue/Color[GlobCoverValue_rel], DialogType = "BrushColor";
+			attribute<float32> MSA := mean(GlobCoverValue/MSA_value, GlobCoverValue/LULC_rel);
+		}
+		
+		
+		
+		/*unit<uint8> LULC : nrofrows = 9 // @USERINPUT@ Could be read from a .csv file as well; if defined here, nrofrows must correspond with the element counts of the following attributes.
 		{
 			attribute<string> Label : [ 'Croplands', 'Forests', 'Grasslands', 'SparseVegetation', 'Wetlands', 'Urban', 'Bare', 'Water', 'NoData'];
 			attribute<bool>   IsLand := Label != 'Water';
 			attribute<GlobCoverValue> GlobCoverValue_rel := invert(GlobCoverValue/LULC_rel); // indicates for each LULC the last GlobCoverValue that refers to it
 			attribute<uint32> Color := GlobCoverValue/Color[GlobCoverValue_rel], DialogType = "BrushColor";
 			attribute<float32> MSA := mean(GlobCoverValue/MSA_value, GlobCoverValue/LULC_rel);
-		}
+		}*/
 		
 		unit<uint8> World : nrofrows =   1 { attribute<string> Label := 'w'+string(ID(.)); }
 		unit<uint8> Biome : nrofrows = 101 { attribute<string> Label := 'b'+string(ID(.)); }
@@ -188,7 +222,7 @@ container LandScale: FreeData = "True"
 	container brondata {
 		
 		unit<ipoint> GlobCoverTIFF:
-			StorageName = "%SourceDataDir%/Global/GLOBCOVER_L4_200901_200912_V2.3.tif"
+			StorageName = "%SourceDataDir%/GLOBIO/input/ESACCI_GLOBIO_1992_water1992-2015.tif"
 		,	StorageType = "gdal.grid"
 		,	StorageReadOnly = "true"
 		,	DialogData = "geometry/LatLong"
@@ -209,15 +243,16 @@ container LandScale: FreeData = "True"
 		{
 			attribute<classifications/Biome> GridData; // max is 99
 		}
-		unit<wpoint> IMAGE:
-			StorageName = "%SourceDataDir%/Global/GREG_5min.asc"
+		unit<ipoint> IMAGE:
+			StorageName = "%SourceDataDir%/GLOBIO/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
 		,	StorageType = "gdal.grid"
 		,	StorageReadOnly = "true"
 		,	DialogData = "geometry/LatLong"
 		{
 			attribute<classifications/IMAGE> GridData; // max is 27
+			attribute<classifications/IMAGE> ReadData(geometry/domain);
 		}
-		unit<wpoint> World := IMAGE
+		unit<ipoint> World := IMAGE
 		{
 			attribute<classifications/World> GridData := const(0[classifications/World], World);
 		}
@@ -234,13 +269,24 @@ container LandScale: FreeData = "True"
 	}
 	
 	container templates {
-		
+		template StoreTrivialBlockIndices
+		{
+			parameter<string> scale_factor_name;
+			
+			unit<wpoint> block_triviality :== "Factors/" + scale_factor_name + "/block"
+			, StorageName = "='%LocalDataDir%/is_trivial_' + scale_factor_name + '.tif'"
+			, StorageType = "tif"
+			, StorageReadOnly = "false"
+			{
+				attribute<bool> GridData :== "Factors/" + scale_factor_name + "/block/is_trivial";
+			}
+		}
+	
 		template FactorData
 		{
 			parameter<uint32> scale_factor;
-			
-			unit<wpoint> block_base := gridset(geometry/domain, point(scale_factor, scale_factor), point(0, 0), wpoint);
-			unit<wpoint> block := TiledUnit(point(1024w, 1024w, block_base))
+
+			unit<wpoint> block := gridset(geometry/domain, point(scale_factor, scale_factor), point(0, 0), wpoint)
 			{
 				attribute<geometry/domain> domain_rel_ul   := mapping(block, geometry/domain);
 				attribute<geometry/domain> domain_rel_ct   :=domain_rel_ul + point(int32(scale_factor / 2), int32(scale_factor / 2));
@@ -254,7 +300,7 @@ container LandScale: FreeData = "True"
 				
 				attribute<classifications/world> world_rel:=const(0[classifications/world], block);
 				attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[domain_rel_ct[brondata/biome]], uint8(#classifications/biome -1));
-				attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/GridData[domain_rel_ct[brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
+				attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/ReadData[domain_rel_ct], uint8(#classifications/IMAGE- 1));
 				attribute<classifications/Deg10Zone> Deg10Zone_rel := brondata/Deg10Zone/GridData[domain_rel_ct];
 				attribute<classifications/Deg15Zone> Deg15Zone_rel := brondata/Deg15Zone/GridData[domain_rel_ct];
 				
@@ -273,10 +319,10 @@ container LandScale: FreeData = "True"
 				attribute<units/km> height :=  const(heightP, block);
 				attribute<units/km> width  :=  rowset/width[row];
 				attribute<units/km2> area  := lat_factor * sqr(HeightP);
-				
 				attribute<bool> is_trivial := all(brondata/LULC_rel == sample_ul[base_grid], base_grid);
 				// 02:22:54 [hr] voor /Factors/x180/block/is_trivial
-				// 158627 blocks (71) are trivial, 64573 (29%) not 
+				// 158627 blocks (71) are trivial, 64573 (29%) not
+				
 			
 				attribute<classifications/LULC> trivial_result := trivial_block/LULC[trivial_block/block_grid];
 			}
@@ -292,13 +338,18 @@ container LandScale: FreeData = "True"
 				attribute<.> block_grid(block) := invert(block_rel);
 				container zones
 				{
-					attribute<classifications/world> world(..) := const(0[classifications/world], block);
-					attribute<classifications/biome> biome(..) := MakeDefined(brondata/biome/GridData[block/domain_rel_ct[block_rel][brondata/biome]], uint8(#classifications/biome -1));
-					attribute<classifications/IMAGE> IMAGE(..) := MakeDefined(brondata/IMAGE/GridData[block/domain_rel_ct[block_rel][brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
-					attribute<classifications/Deg10Zone> Deg10Zone(..) := geometry/Deg10/Zone_rel[mapping(block, geometry/Deg10)[block_rel]];
-					attribute<classifications/Deg15Zone> Deg15Zone(..) := geometry/Deg15/Zone_rel[mapping(block, geometry/Deg15)[block_rel]];
+					attribute<classifications/world> world(non_trivial_block) := const(0[classifications/world], non_trivial_block);
+					attribute<classifications/biome> biome(non_trivial_block) := MakeDefined(brondata/biome/GridData[block/domain_rel_ct[block_rel][brondata/biome]], uint8(#classifications/biome -1));
+					attribute<classifications/IMAGE> IMAGE(non_trivial_block) := MakeDefined(brondata/IMAGE/GridData[block/domain_rel_ct[block_rel][brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
+					attribute<classifications/Deg10Zone> Deg10Zone(non_trivial_block) := geometry/Deg10/Zone_rel[mapping(block, geometry/Deg10)[block_rel]];
+					attribute<classifications/Deg15Zone> Deg15Zone(non_trivial_block) := geometry/Deg15/Zone_rel[mapping(block, geometry/Deg15)[block_rel]];
 				}
-				container counts := reg_count_uint16(non_trivial_cell/LULC_rel, classifications/LULC/label, non_trivial_cell, const('non_trivial_block_rel', classifications/LULC) );
+				container counts := reg_count_uint16(non_trivial_cell/LULC_rel, classifications/LULC/label, non_trivial_cell, const('non_trivial_block_rel', classifications/LULC) )
+				{
+					attribute<uint16> total(non_trivial_block) := ='add('+AsItemList(classifications/LULC/label)+')';
+				}
+				
+				
 				container Suitabilities_raw := 
 					for_each_nedv(classifications/LULC/label, 
 						'int32(counts/'+classifications/LULC/label+')',
@@ -725,9 +776,25 @@ container LandScale: FreeData = "True"
 				{
 					attribute<string>  name : [ 'zone_rel' ];
 				}
-				container counts := for_each_nedv(classifications/LULC/label, 'sum(uint32(non_trivial_block/counts/'+classifications/LULC/label+'), non_trivial_block/zone_rel)', zone, UInt32);
-				container MinClaims := for_each_nedv(classifications/LULC/label, ' counts/'+classifications/LULC/label+' / Sqr(FactorData/scale_factor)', zone, UInt32);
-				container MaxClaims := for_each_nedv(classifications/LULC/label, '(counts/'+classifications/LULC/label+'+ Sqr(FactorData/scale_factor)-1)/ Sqr(FactorData/scale_factor)', zone, UInt32);
+				
+				container counts := for_each_nedv(classifications/LULC/label, 'sum(uint32(non_trivial_block/counts/'+classifications/LULC/label+'), non_trivial_block/zone_rel)', zone, UInt32)
+				{
+					attribute<uint32> total(zone) := ='add('+AsItemList(classifications/LULC/label)+')';
+				}
+				container MinClaims := for_each_nedv(classifications/LULC/label, ' counts/'+classifications/LULC/label+' / Sqr(FactorData/scale_factor)', zone, UInt32)
+				{
+					attribute<uint32> total(zone) := ='add('+AsItemList(classifications/LULC/label)+')';
+				}
+				container MaxClaims := for_each_nedv(classifications/LULC/label, '(counts/'+classifications/LULC/label+ '+ Sqr(FactorData/scale_factor)-1) / Sqr(FactorData/scale_factor)', zone, UInt32)
+				{
+					attribute<uint32> total(zone) := ='add('+AsItemList(classifications/LULC/label)+')';
+				}
+				
+				
+				container claim_statistics
+				{
+					parameter<uint32> sum_min_claims :== "sum()";
+				}
 				
 				container alloc := 
 					discrete_alloc(

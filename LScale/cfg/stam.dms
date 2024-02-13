@@ -46,13 +46,17 @@ container LandScale: FreeData = "True"
 			unit<ipoint> Iceland := range(brondata/GlobCoverTIFF
 			, point_xy(-30.0+offset05secs, 60.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
 			, point_xy(  0.0+offset05secs, 75.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
+			
+			unit<ipoint> World := range(brondata/GlobCoverTIFF
+			, point_xy(-180.0+offset05secs, -90.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
+			, point_xy( 180.0+offset05secs,  90.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
 		}
 
 		// StudyArea, the area for which aggregations are made (with integer scale factors >= 2); can be all of the world.
 		// TODO: allow for processing a range of StudyAreas
-		unit<ipoint> StudyArea := study_areas/Europe; //Iceland;
+		unit<ipoint> StudyArea := study_areas/World; //Europe;
 		//unit<ipoint> StudyArea := brondata/GlobCoverTIFF; // @@USERINPUT: Choose all of GlobCoverTIFF
-		//unit<ipoint> StudyArea := SelectedStudyArea;      // @@USERINPUT: Choose a selection as specified below.
+		//unit<ipoint> StudyArea := SelectedStudyArea;      // @@USERINPUT: Choose a selection as specified below.		
 		
 		unit<ipoint> domain := StudyArea;// TiledUnit(point_yx(256i, 129600i, StudyArea)); // To be considered: could also be 180x180 to line up with scale factor
 		

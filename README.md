@@ -5,7 +5,7 @@ This repository provides GLOBIO functionality using GeoDMS for **landuse allocat
 ## Setup
 <details>
 <summary><b>GeoDMS software</b></summary>
-<p>Open source Geographic Data & Model Software (GeoDMS) is actively being developed to create (geographical explicit) planning support systems. For installation of GeoDMS navigate to the <a href="https://github.com/ObjectVision/GeoDMS/releases">releases</a> page of <a href="https://github.com/ObjectVision/GeoDMS">GeoDMS</a> and follow the steps. </p>
+<p>Open source Geographic Data & Model Software (GeoDMS) is actively being developed to create (geographical explicit) planning support systems. For installation of GeoDMS navigate to the <a href="https://github.com/ObjectVision/GeoDMS/releases">releases</a> page of <a href="https://github.com/ObjectVision/GeoDMS">GeoDMS</a> and follow the steps of the downloaded installer. </p>
 </details>
 
 ### Source data

@@ -5,7 +5,7 @@ This repository provides GLOBIO functionality using GeoDMS for **landuse allocat
 ## Setup
 <details>
 <summary><b>GeoDMS software</b></summary>
-<p>Open source Geographic Data & Model Software (GeoDMS) wordt actief ontwikkeld voor het maken van (geografisch expliciete) plannings ondersteunings systemen. Navigeer voor de installatie van GeoDMS naar de <a href="https://github.com/ObjectVision/GeoDMS/releases">releases</a> pagina van <a href="https://github.com/ObjectVision/GeoDMS">GeoDMS</a> en volg de installatie stappen. De huidige publieke versie van Hestia is getest met GeoDMS versie 14.4.2</p>
+<p>Open source Geographic Data & Model Software (GeoDMS) is actively being developed to create (geographical explicit) planning support systems. For installation of GeoDMS navigate to the <a href="https://github.com/ObjectVision/GeoDMS/releases">releases</a> page of <a href="https://github.com/ObjectVision/GeoDMS">GeoDMS</a> and follow the steps. </p>
 </details>
 
 ### Source data

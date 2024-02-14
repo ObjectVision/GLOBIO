@@ -9,7 +9,9 @@
 container LandScale: FreeData = "True"
 {
 	container geometry {
-		unit<dpoint> LatLong := range(dpoint, point(-90.0,-180.0), point(90.0, 180.0))
+	
+		unit<dpoint> LatLongBase : SpatialReference = "EPSG:4326", DialogData = "wmsLayer";
+		unit<dpoint> LatLong := range(LatLongBase, point(-90.0,-180.0), point(90.0, 180.0))
 		{
 			parameter<float32> ViewPortMinSize := 100f / 3600f;
 		}
@@ -372,7 +374,7 @@ container LandScale: FreeData = "True"
 				attribute<classifications/LULC> LULC_rel := brondata/LULC_rel[domain_rel]; // 2:40[min] voor /Factors/x180/block/sample_ul
 				attribute<block> block_rel := block/base_grid[domain_rel];
 				attribute<non_trivial_block> non_trivial_block_rel := invert(non_trivial_block/block_rel)[block_rel];
-				
+			
 			}
 		}
 		template case

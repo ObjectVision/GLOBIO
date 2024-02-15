@@ -1,16 +1,19 @@
-// TODO
-//	GEODMS
-//		export data with gdal
-//		aggr functies (pcount, sum, all, any, lookup, modus) met related unit als partitioner naast de huidige partitioning attribuut.
-//		allow for template type placeholders allowing for heterogeneous instantiations
-//		tile-by-tile pipelining to reduce memory consumption
-// 		implement simplified discrete_alloc for the single partitioning case (and for no partitioning at all)
+//	TODO CONFIG
+//	-	export data with gdal
+//
+//	POSSIBLE OPTIMIZATIONS IN GEODMS
+//	-	sequentiele generatie van resultaat van aggr functies (pcount, sum, all, any, lookup, modus) met related unit als partitioner naast de huidige partitioning attribuut.
+//	-	allow for template type placeholders allowing for heterogeneous instantiations
+// 	-	implement simplified discrete_alloc for the single partitioning case (and for no partitioning at all)
 
 container LandScale: FreeData = "True"
 {
-	container geometry {
-	
-		unit<dpoint> LatLongBase : SpatialReference = "EPSG:4326", DialogData = "wmsLayer";
+	container geography {
+
+		#include<wms_layer_llh.dms>
+
+		unit<dpoint> LatLongBase : SpatialReference = "EPSG:4326", DialogData = "wms_layer_llh";
+
 		unit<dpoint> LatLong := range(LatLongBase, point(-90.0,-180.0), point(90.0, 180.0))
 		{
 			parameter<float32> ViewPortMinSize := 100f / 3600f;
@@ -21,10 +24,10 @@ container LandScale: FreeData = "True"
 			attribute<Float32> Weight := scalesum(1f/sqrt(float32(SqrDst+1)), 1.0f);
 		}
 
-		parameter<LatLong> StudyArea_SouthWest := point_xy(00.0, -15.0, geometry/LatLong); //  @@USERINPUT, sort of SW of Europe
-		parameter<LatLong> StudyArea_NorthEast := point_xy(60.0,  75.0, geometry/LatLong); //  @@USERINPUT, sort of NE of Europe
-//		parameter<LatLong> StudyArea_SouthWest := point_xy(60.0, -15.0, geometry/LatLong); //  @@USERINPUT, Iceland?
-//		parameter<LatLong> StudyArea_NorthEast := point_xy(90.0,  45.0, geometry/LatLong); //  @@USERINPUT, North pole above Nova Zembla?
+		parameter<LatLong> StudyArea_SouthWest := point_xy(00.0, -15.0, LatLong); //  @@USERINPUT, sort of SW of Europe
+		parameter<LatLong> StudyArea_NorthEast := point_xy(60.0,  75.0, LatLong); //  @@USERINPUT, sort of NE of Europe
+//		parameter<LatLong> StudyArea_SouthWest := point_xy(60.0, -15.0, LatLong); //  @@USERINPUT, Iceland?
+//		parameter<LatLong> StudyArea_NorthEast := point_xy(90.0,  45.0, LatLong); //  @@USERINPUT, North pole above Nova Zembla?
 		unit<ipoint> SelectedStudyArea := 
 			range(brondata/GlobCoverTIFF, 
 				StudyArea_SouthWest[brondata/GlobCoverTIFF],
@@ -42,16 +45,16 @@ container LandScale: FreeData = "True"
 			//parameter<float64> offset := Iceland lower_bound  point_yx(180.0, 180.0, );
 			
 			unit<ipoint> Europe  := range(brondata/GlobCoverTIFF
-			, point_xy(-12.0+offset05secs, 30.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
-			, point_xy(45.0+offset05secs, 70.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
+			, point_xy(-12.0+offset05secs, 30.0-offset05secs, LatLong)[brondata/GlobCoverTIFF]
+			, point_xy(45.0+offset05secs, 70.0-offset05secs, LatLong)[brondata/GlobCoverTIFF]);
 			
 			unit<ipoint> Iceland := range(brondata/GlobCoverTIFF
-			, point_xy(-30.0+offset05secs, 60.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
-			, point_xy(  0.0+offset05secs, 75.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
+			, point_xy(-30.0+offset05secs, 60.0-offset05secs, LatLong)[brondata/GlobCoverTIFF]
+			, point_xy(  0.0+offset05secs, 75.0-offset05secs, LatLong)[brondata/GlobCoverTIFF]);
 			
 			unit<ipoint> World := range(brondata/GlobCoverTIFF
-			, point_xy(-180.0+offset05secs, -90.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]
-			, point_xy( 180.0+offset05secs,  90.0-offset05secs, geometry/LatLong)[brondata/GlobCoverTIFF]);
+			, point_xy(-180.0+offset05secs, -90.0-offset05secs, LatLong)[brondata/GlobCoverTIFF]
+			, point_xy( 180.0+offset05secs,  90.0-offset05secs, LatLong)[brondata/GlobCoverTIFF]);
 		}
 
 		// StudyArea, the area for which aggregations are made (with integer scale factors >= 2); can be all of the world.
@@ -66,8 +69,8 @@ container LandScale: FreeData = "True"
 		// cannot be larger than 2^16 pixels wide, which is approx. 180 Degrees as 1 pixes is 10 arcsecs.
 		// TODO: allow for processing a range of SampleAreas
 		
-		parameter<LatLong> SampleArea_NorthWest := point(60.0, -10.0, geometry/LatLong); //  @@USERINPUT
-		parameter<LatLong> SampleArea_SouthEast := point(40.0,  30.0, geometry/LatLong); //  @@USERINPUT
+		parameter<LatLong> SampleArea_NorthWest := point(60.0, -10.0, LatLong); //  @@USERINPUT
+		parameter<LatLong> SampleArea_SouthEast := point(40.0,  30.0, LatLong); //  @@USERINPUT
 		
 		unit<wpoint> SampleRaster := gridset(brondata/GlobCoverTIFF, point(1w, 1w), SampleArea_NorthWest[brondata/GlobCoverTIFF], wpoint);
 		unit<wpoint> SampleArea   := range(SampleRaster, point(0w, 0w), SampleArea_SouthEast[SampleRaster]); // NorthEast of SampleArea 
@@ -137,22 +140,22 @@ container LandScale: FreeData = "True"
 		}*/
 		
 		unit<uint8> World : nrofrows =   1 { attribute<string> Label := 'w'+string(ID(.)); }
-		unit<uint8> Biome : nrofrows = 101 { attribute<string> Label := 'b'+string(ID(.)); }
+		unit<uint8> Biome := /brondata/BiomeShape;
 		unit<uint8> IMAGE : nrofrows =  29 { attribute<string> Label := 'g'+string(ID(.)); }
 
-		unit<uint32> Deg10_sel := subset(geometry/Deg10/HasLand); // { attribute<string> Label := 'b'+PointRow(nr_OrgEntity)+'_'+PointCol(nr_OrgEntity); }
-		unit<uint32> Deg15_sel := subset(geometry/Deg15/HasLand); // { attribute<string> Label := 'B'+PointRow(nr_OrgEntity)+'_'+PointCol(nr_OrgEntity); }
+		unit<uint32> Deg10_sel := subset(geography/Deg10/HasLand); // { attribute<string> Label := 'b'+PointRow(nr_OrgEntity)+'_'+PointCol(nr_OrgEntity); }
+		unit<uint32> Deg15_sel := subset(geography/Deg15/HasLand); // { attribute<string> Label := 'B'+PointRow(nr_OrgEntity)+'_'+PointCol(nr_OrgEntity); }
 		unit<uint8>  Deg10Zone := range(uint8, 0b, uint8(#Deg10_sel)+1b), DialogType = "Map", DialogData = "BaseGrid"
 		{
-			attribute<.> BaseGrid(geometry/Deg10) := value(invert(Deg10_sel/nr_OrgEntity), Deg10Zone);
-			attribute<geometry/Deg10> Deg10_rel := union_data(., Deg10_sel/nr_OrgEntity, point(0s / 0s, 0s / 0s));
+			attribute<.> BaseGrid(geography/Deg10) := value(invert(Deg10_sel/nr_OrgEntity), Deg10Zone);
+			attribute<geography/Deg10> Deg10_rel := union_data(., Deg10_sel/nr_OrgEntity, point(0s / 0s, 0s / 0s));
 			attribute<string> Label := MakeDefined('b'+string(PointRow(Deg10_rel))+'_'+string(PointCol(Deg10_rel)), 'RestZone');
 			parameter<.> RestZone := uint8(#Deg10_sel);
 		}
 		unit<uint8>  Deg15Zone := range(uint8, 0b, uint8(#Deg15_sel)+1b), DialogType = "Map", DialogData = "BaseGrid"
 		{
-			attribute<.> BaseGrid(geometry/Deg15) := value(invert(Deg15_sel/nr_OrgEntity), Deg15Zone);
-			attribute<geometry/Deg15> Deg15_rel := union_data(., Deg15_sel/nr_OrgEntity, point(0s / 0s, 0s / 0s));
+			attribute<.> BaseGrid(geography/Deg15) := value(invert(Deg15_sel/nr_OrgEntity), Deg15Zone);
+			attribute<geography/Deg15> Deg15_rel := union_data(., Deg15_sel/nr_OrgEntity, point(0s / 0s, 0s / 0s));
 			attribute<string> Label := MakeDefined('B'+string(PointRow(Deg15_rel))+'_'+string(PointCol(Deg15_rel)), 'RestZone');
 			parameter<.> RestZone := uint8(#Deg15_sel);
 		}
@@ -231,32 +234,36 @@ container LandScale: FreeData = "True"
 			StorageName = "%SourceDataDir%/GLOBIO/input/ESACCI_GLOBIO_1992_water1992-2015.tif"
 		,	StorageType = "gdal.grid"
 		,	StorageReadOnly = "true"
-		,	DialogData = "geometry/LatLong"
+		,	DialogData = "geography/LatLong"
 		{
-			attribute<classifications/GlobCoverData>  ReadData (geometry/domain);
-			attribute<classifications/GlobCoverValue> GridValue(geometry/domain) := classifications/GlobCoverData/GlobCoverValue_rel[ReadData];
-			attribute<classifications/GlobCoverData>  SampleData (geometry/sample_domain);
-			attribute<classifications/GlobCoverValue> SampleValue(geometry/sample_domain) := classifications/GlobCoverData/GlobCoverValue_rel[SampleData];
+			attribute<classifications/GlobCoverData>  ReadData (geography/domain);
+			attribute<classifications/GlobCoverValue> GridValue(geography/domain) := classifications/GlobCoverData/GlobCoverValue_rel[ReadData];
+			attribute<classifications/GlobCoverData>  SampleData (geography/sample_domain);
+			attribute<classifications/GlobCoverValue> SampleValue(geography/sample_domain) := classifications/GlobCoverData/GlobCoverValue_rel[SampleData];
 		}
-		attribute<classifications/LULC> LULC_rel(geometry/domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/GridValue];
-		attribute<classifications/LULC> Sample_LULC_rel(geometry/sample_domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/SampleValue];
+		attribute<classifications/LULC> LULC_rel(geography/domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/GridValue];
+		attribute<classifications/LULC> Sample_LULC_rel(geography/sample_domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/SampleValue];
 		
-		unit<wpoint> biome:
-			StorageName = "%SourceDataDir%/Global/biomes.asc"
-		,	StorageType = "gdal.grid"
+		unit<uint32> BiomeShape: StorageName = "%SourceDataDir%/GLOBIO/input/biome_data/wwf_terr_biom.shp"
+//		,	StorageType = "gdal.vect"
 		,	StorageReadOnly = "true"
-		,	DialogData = "geometry/LatLong"
 		{
-			attribute<classifications/Biome> GridData; // max is 99
+			attribute<geography/LatLong> Geometry(poly);
 		}
+		unit<wpoint> biome
+		{
+			attribute<BiomeShape> GridData     (geography/domain) := poly2grid_untiled(BiomeShape/Geometry, geography/domain);
+			attribute<BiomeShape> GridData_slow(geography/domain) := poly2grid(BiomeShape/Geometry, geography/domain);
+		}
+
 		unit<ipoint> IMAGE:
 			StorageName = "%SourceDataDir%/GLOBIO/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
 		,	StorageType = "gdal.grid"
 		,	StorageReadOnly = "true"
-		,	DialogData = "geometry/LatLong"
+		,	DialogData = "geography/LatLong"
 		{
 			attribute<classifications/IMAGE> GridData; // max is 27
-			attribute<classifications/IMAGE> ReadData(geometry/domain);
+			attribute<classifications/IMAGE> ReadData(geography/domain);
 		}
 		unit<ipoint> World := IMAGE
 		{
@@ -264,13 +271,13 @@ container LandScale: FreeData = "True"
 		}
 		container Deg10Zone
 		{
-			attribute<classifications/Deg10Zone> GridData  (geometry/domain       ) := geometry/Deg10/Zone_rel[mapping(geometry/domain, geometry/Deg10)];
-			attribute<classifications/Deg10Zone> SampleData(geometry/sample_domain) := geometry/Deg10/Zone_rel[mapping(geometry/sample_domain, geometry/Deg10)];
+			attribute<classifications/Deg10Zone> GridData  (geography/domain       ) := geography/Deg10/Zone_rel[mapping(geography/domain, geography/Deg10)];
+			attribute<classifications/Deg10Zone> SampleData(geography/sample_domain) := geography/Deg10/Zone_rel[mapping(geography/sample_domain, geography/Deg10)];
 		}
 		container Deg15Zone
 		{
-			attribute<classifications/Deg15Zone> GridData  (geometry/domain       ) := geometry/Deg15/Zone_rel[mapping(geometry/domain, geometry/Deg15)];
-			attribute<classifications/Deg15Zone> SampleData(geometry/sample_domain) := geometry/Deg15/Zone_rel[mapping(geometry/sample_domain, geometry/Deg15)];
+			attribute<classifications/Deg15Zone> GridData  (geography/domain       ) := geography/Deg15/Zone_rel[mapping(geography/domain, geography/Deg15)];
+			attribute<classifications/Deg15Zone> SampleData(geography/sample_domain) := geography/Deg15/Zone_rel[mapping(geography/sample_domain, geography/Deg15)];
 		}
 	}
 	
@@ -292,13 +299,13 @@ container LandScale: FreeData = "True"
 		{
 			parameter<uint32> scale_factor;
 
-			unit<wpoint> block := gridset(geometry/domain, point(scale_factor, scale_factor), point(0, 0), wpoint)
+			unit<wpoint> block := gridset(geography/domain, point(scale_factor, scale_factor), point(0, 0), wpoint)
 			{
-				attribute<geometry/domain> domain_rel_ul   := mapping(block, geometry/domain);
-				attribute<geometry/domain> domain_rel_ct   :=domain_rel_ul + point(int32(scale_factor / 2), int32(scale_factor / 2));
-				attribute<geometry/domain> domain_rel_rnd  :=domain_rel_ul + point(int32(rnd_uniform(0, block, range(uint32,0, scale_factor))), int32(rnd_uniform(1, block, range(uint32,0, scale_factor))));
+				attribute<geography/domain> domain_rel_ul   := mapping(block, geography/domain);
+				attribute<geography/domain> domain_rel_ct   :=domain_rel_ul + point(int32(scale_factor / 2), int32(scale_factor / 2));
+				attribute<geography/domain> domain_rel_rnd  :=domain_rel_ul + point(int32(rnd_uniform(0, block, range(uint32,0, scale_factor))), int32(rnd_uniform(1, block, range(uint32,0, scale_factor))));
 				
-				attribute<block> base_grid(geometry/domain) := mapping(geometry/domain, block);
+				attribute<block> base_grid(geography/domain) := mapping(geography/domain, block);
 				
 				attribute<classifications/LULC> sample_ul := brondata/LULC_rel[domain_rel_ul ];
 				attribute<classifications/LULC> sample_ct := brondata/LULC_rel[domain_rel_ct ];
@@ -347,8 +354,8 @@ container LandScale: FreeData = "True"
 					attribute<classifications/world> world(non_trivial_block) := const(0[classifications/world], non_trivial_block);
 					attribute<classifications/biome> biome(non_trivial_block) := MakeDefined(brondata/biome/GridData[block/domain_rel_ct[block_rel][brondata/biome]], uint8(#classifications/biome -1));
 					attribute<classifications/IMAGE> IMAGE(non_trivial_block) := MakeDefined(brondata/IMAGE/GridData[block/domain_rel_ct[block_rel][brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
-					attribute<classifications/Deg10Zone> Deg10Zone(non_trivial_block) := geometry/Deg10/Zone_rel[mapping(block, geometry/Deg10)[block_rel]];
-					attribute<classifications/Deg15Zone> Deg15Zone(non_trivial_block) := geometry/Deg15/Zone_rel[mapping(block, geometry/Deg15)[block_rel]];
+					attribute<classifications/Deg10Zone> Deg10Zone(non_trivial_block) := geography/Deg10/Zone_rel[mapping(block, geography/Deg10)[block_rel]];
+					attribute<classifications/Deg15Zone> Deg15Zone(non_trivial_block) := geography/Deg15/Zone_rel[mapping(block, geography/Deg15)[block_rel]];
 				}
 				container counts := reg_count_uint16(non_trivial_cell/LULC_rel, classifications/LULC/label, non_trivial_cell, const('non_trivial_block_rel', classifications/LULC) )
 				{
@@ -370,7 +377,7 @@ container LandScale: FreeData = "True"
 			}
 			unit<uint64> non_trivial_cell := subset(not(block/is_trivial[block/base_grid]))
 			{
-				attribute<geometry/domain> domain_rel := nr_OrgEntity;
+				attribute<geography/domain> domain_rel := nr_OrgEntity;
 				attribute<classifications/LULC> LULC_rel := brondata/LULC_rel[domain_rel]; // 2:40[min] voor /Factors/x180/block/sample_ul
 				attribute<block> block_rel := block/base_grid[domain_rel];
 				attribute<non_trivial_block> non_trivial_block_rel := invert(non_trivial_block/block_rel)[block_rel];
@@ -856,7 +863,7 @@ container LandScale: FreeData = "True"
 	// indicatoren voor basisdata zonder upscaling
 	container SourceResolutionSample
 	{
-		unit<wpoint> sd := geometry/sample_domain // TODO: samenvoegen met schema voor Factors, onderdeel block, waaruit hulpmiddelen voor aggregatie apart gezet moeten worden.
+		unit<wpoint> sd := geography/sample_domain // TODO: samenvoegen met schema voor Factors, onderdeel block, waaruit hulpmiddelen voor aggregatie apart gezet moeten worden.
 		{
 			attribute<classifications/world> world_rel:=const(0[classifications/world], sd);
 			attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[mapping(sd,brondata/biome)], uint8(#classifications/biome -1));

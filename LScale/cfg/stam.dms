@@ -244,16 +244,54 @@ container LandScale: FreeData = "True"
 		attribute<classifications/LULC> LULC_rel(geography/domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/GridValue];
 		attribute<classifications/LULC> Sample_LULC_rel(geography/sample_domain) := classifications/GlobCoverValue/LULC_rel[GlobCoverTIFF/SampleValue];
 		
-		unit<uint32> BiomeShape: StorageName = "%SourceDataDir%/GLOBIO/input/biome_data/wwf_terr_biom.shp"
-//		,	StorageType = "gdal.vect"
+		unit<uint8> BiomeShape: StorageName = "%SourceDataDir%/GLOBIO/input/biome_data/wwf_terr_biom.shp"
+		,	StorageType = "gdal.vect"
 		,	StorageReadOnly = "true"
 		{
 			attribute<geography/LatLong> Geometry(poly);
+			
+			attribute<string> Label: [
+			  'Tropical & Subtropical Moist Broadleaf Forests'
+			, 'Tropical & Subtropical Coniferous Forests'
+			, 'Temperate Broadleaf & Mixed Forests'
+			, 'Temperate Conifer Forests'
+			, 'Alpine Forests'
+			, 'Boreal Forests/Taiga'
+			, 'Tropical & Subtropical Grasslands, Savannas & Shrublands'
+			, 'Temperate Grasslands, Savannas & Shrublands'
+			, 'Flooded Grasslands & Savannas'
+			, 'Montane Grasslands & Shrublands'
+			, 'Tundra'
+			, 'Mediterranean Forests, Woodlands & Scrub'
+			, 'Deserts & Xeric Shrublands '
+			, 'Mangroves'
+			, 'xxx'
+			, 'Ice'
+			];
+			
+			attribute<uint32> BrushColor : [
+			  rgb(34, 139, 34) // Tropical & Subtropical Moist Broadleaf Forests: (34, 139, 34) - Green
+			, rgb(0, 128, 0) // Tropical & Subtropical Coniferous Forests: (0, 128, 0) - Dark Green
+			, rgb(50, 205, 50) // Temperate Broadleaf & Mixed Forests: (50, 205, 50) - Lime Green
+			, rgb(0, 100, 0) // Temperate Conifer Forests: (0, 100, 0) - Darker Green
+			, rgb(128, 128, 255) //Alpine Forests: bluer green
+			, rgb(30, 144, 255) // Boreal Forests/Taiga: (30, 144, 255) - Dodger Blue
+			, rgb(238, 232, 170) // Tropical & Subtropical Grasslands, Savannas & Shrublands: (238, 232, 170) - Pale Golden Rod
+			, rgb(245, 222, 179) // Temperate Grasslands, Savannas & Shrublands: (245, 222, 179) - Wheat
+			, rgb(64, 224, 208) // Flooded Grasslands & Savannas: (64, 224, 208) - Turquoise
+			, rgb(152, 251, 152) // Montane Grasslands & Shrublands: (152, 251, 152) - Pale Green
+			, rgb(176, 224, 230) // Tundra: (176, 224, 230) - Powder Blue
+			, rgb(188, 143, 143) // Mediterranean Forests, Woodlands & Scrub: (188, 143, 143) - Rosy Brown
+			, rgb(244, 164, 96)  // Deserts & Xeric Shrublands: (244, 164, 96) - Sandy Brown
+			, rgb(32, 178, 170) // Mangroves: - Light Sea Green
+			, rgb(0, 0, 0) // Undefined: (0, 0, 0) - Black
+			, rgb(255, 255, 255) //Ice:- White
+			]
+			, DialogType = "BrushColor";
 		}
 		unit<wpoint> biome
 		{
-			attribute<BiomeShape> GridData     (geography/domain) := poly2grid_untiled(BiomeShape/Geometry, geography/domain);
-			attribute<BiomeShape> GridData_slow(geography/domain) := poly2grid(BiomeShape/Geometry, geography/domain);
+			attribute<BiomeShape> GridData(geography/domain) := poly2grid_untiled(BiomeShape/Geometry, geography/domain);
 		}
 
 		unit<ipoint> IMAGE:

@@ -253,9 +253,9 @@ container LandScale: FreeData = "True"
 			attribute<string> Label: [
 			  'Tropical & Subtropical Moist Broadleaf Forests'
 			, 'Tropical & Subtropical Coniferous Forests'
+			, 'Monsoon Forests'
 			, 'Temperate Broadleaf & Mixed Forests'
-			, 'Temperate Conifer Forests'
-			, 'Alpine Forests'
+			, 'Montane Forests'
 			, 'Boreal Forests/Taiga'
 			, 'Tropical & Subtropical Grasslands, Savannas & Shrublands'
 			, 'Temperate Grasslands, Savannas & Shrublands'
@@ -272,8 +272,8 @@ container LandScale: FreeData = "True"
 			attribute<uint32> BrushColor : [
 			  rgb(34, 139, 34) // Tropical & Subtropical Moist Broadleaf Forests: (34, 139, 34) - Green
 			, rgb(0, 128, 0) // Tropical & Subtropical Coniferous Forests: (0, 128, 0) - Dark Green
+			, rgb(0, 100, 0) // Monsoon forest - Darker Green
 			, rgb(50, 205, 50) // Temperate Broadleaf & Mixed Forests: (50, 205, 50) - Lime Green
-			, rgb(0, 100, 0) // Temperate Conifer Forests: (0, 100, 0) - Darker Green
 			, rgb(128, 128, 255) //Alpine Forests: bluer green
 			, rgb(30, 144, 255) // Boreal Forests/Taiga: (30, 144, 255) - Dodger Blue
 			, rgb(238, 232, 170) // Tropical & Subtropical Grasslands, Savannas & Shrublands: (238, 232, 170) - Pale Golden Rod

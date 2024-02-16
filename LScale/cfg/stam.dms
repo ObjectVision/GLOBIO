@@ -350,7 +350,7 @@ container LandScale: FreeData = "True"
 				attribute<classifications/LULC> sample_rnd:= brondata/LULC_rel[domain_rel_rnd]; // 2:40[min] voor /Factors/x180/block/sample_ul
 				
 				attribute<classifications/world> world_rel:=const(0[classifications/world], block);
-				attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[domain_rel_ct[brondata/biome]], uint8(#classifications/biome -1));
+				attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[domain_rel_ct], uint8(#classifications/biome -1));
 				attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/ReadData[domain_rel_ct], uint8(#classifications/IMAGE- 1));
 				attribute<classifications/Deg10Zone> Deg10Zone_rel := brondata/Deg10Zone/GridData[domain_rel_ct];
 				attribute<classifications/Deg15Zone> Deg15Zone_rel := brondata/Deg15Zone/GridData[domain_rel_ct];
@@ -359,8 +359,8 @@ container LandScale: FreeData = "True"
 				
 				unit<uint16> rowset := range(uint16, pointrow(Lowerbound(block)), pointrow(Upperbound(block)))
 				{
-					attribute<float64> lat_top := pointrow( point(ID(rowset), const(0w, rowset), block)[geometry/LatLong] );
-					attribute<float64> lat_mid := lat_top  + 0.5 * pointrow(getprojectionfactor(block)[geometry/LatLong]);
+					attribute<float64> lat_top := pointrow( point(ID(rowset), const(0w, rowset), block)[geography/LatLong] );
+					attribute<float64> lat_mid := lat_top  + 0.5 * pointrow(getprojectionfactor(block)[geography/LatLong]);
 					attribute<Float32> lat_factor := Float32( cos(lat_mid * 2d*pi() / 360d ) );
 					attribute<units/km> width := lat_factor * heightP;
 				}
@@ -390,8 +390,8 @@ container LandScale: FreeData = "True"
 				container zones
 				{
 					attribute<classifications/world> world(non_trivial_block) := const(0[classifications/world], non_trivial_block);
-					attribute<classifications/biome> biome(non_trivial_block) := MakeDefined(brondata/biome/GridData[block/domain_rel_ct[block_rel][brondata/biome]], uint8(#classifications/biome -1));
-					attribute<classifications/IMAGE> IMAGE(non_trivial_block) := MakeDefined(brondata/IMAGE/GridData[block/domain_rel_ct[block_rel][brondata/IMAGE]], uint8(#classifications/IMAGE- 1));
+					attribute<classifications/biome> biome(non_trivial_block) := MakeDefined(brondata/biome/GridData[block/domain_rel_ct[block_rel]], uint8(#classifications/biome -1));
+					attribute<classifications/IMAGE> IMAGE(non_trivial_block) := MakeDefined(brondata/IMAGE/ReadData[block/domain_rel_ct[block_rel]], uint8(#classifications/IMAGE- 1));
 					attribute<classifications/Deg10Zone> Deg10Zone(non_trivial_block) := geography/Deg10/Zone_rel[mapping(block, geography/Deg10)[block_rel]];
 					attribute<classifications/Deg15Zone> Deg15Zone(non_trivial_block) := geography/Deg15/Zone_rel[mapping(block, geography/Deg15)[block_rel]];
 				}
@@ -443,7 +443,7 @@ container LandScale: FreeData = "True"
 			unit<wpoint> block;
 			attribute<classifications/LULC> LULC_rel(block);
 			
-			attribute<float32> NEPO(block) := ='merge(LULC_rel, float32, '+AsItemList(replace(' potential(Float32(LULC_rel == @LULC@[uint8]), geometry/NEPO_kernel/Weight)', '@LULC@', string(ID(classifications/LULC))))+')';
+			attribute<float32> NEPO(block) := ='merge(LULC_rel, float32, '+AsItemList(replace(' potential(Float32(LULC_rel == @LULC@[uint8]), geography/NEPO_kernel/Weight)', '@LULC@', string(ID(classifications/LULC))))+')';
 			attribute<uint8>   NEDV(block) := diversity(LULC_rel, 10w, 1w); // diversity in a circle with radius 10.
 			
 			container ZoneTypes := 
@@ -904,8 +904,8 @@ container LandScale: FreeData = "True"
 		unit<wpoint> sd := geography/sample_domain // TODO: samenvoegen met schema voor Factors, onderdeel block, waaruit hulpmiddelen voor aggregatie apart gezet moeten worden.
 		{
 			attribute<classifications/world> world_rel:=const(0[classifications/world], sd);
-			attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[mapping(sd,brondata/biome)], uint8(#classifications/biome -1));
-			attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/GridData[mapping(sd,brondata/IMAGE)], uint8(#classifications/IMAGE- 1));
+			attribute<classifications/biome> biome_rel:= MakeDefined(brondata/biome/GridData[mapping(sd, geography/domain)], uint8(#classifications/biome -1));
+			attribute<classifications/IMAGE> IMAGE_rel:= MakeDefined(brondata/IMAGE/ReadData[mapping(sd, geography/domain)], uint8(#classifications/IMAGE- 1));
 			attribute<classifications/Deg10Zone> Deg10Zone_rel := brondata/Deg10Zone/SampleData;
 			attribute<classifications/Deg15Zone> Deg15Zone_rel := brondata/Deg15Zone/SampleData;
 			
@@ -913,8 +913,8 @@ container LandScale: FreeData = "True"
 			
 			unit<uint16> rowset := range(uint16, pointrow(Lowerbound(sd)), pointrow(Upperbound(sd)))
 			{
-				attribute<float64> lat_top := pointrow( point(ID(rowset), const(0w, rowset), sd)[geometry/LatLong] );
-				attribute<float64> lat_mid := lat_top  + 0.5 * pointrow(getprojectionfactor(sd)[geometry/LatLong]);
+				attribute<float64> lat_top := pointrow( point(ID(rowset), const(0w, rowset), sd)[geography/LatLong] );
+				attribute<float64> lat_mid := lat_top  + 0.5 * pointrow(getprojectionfactor(sd)[geography/LatLong]);
 				attribute<Float32> lat_factor := Float32( cos(lat_mid * 2d*pi() / 360d ) );
 				attribute<units/km> width := lat_factor * heightP;
 			}

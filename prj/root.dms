@@ -9,7 +9,7 @@ container GLOBIO
 	container parameters
 	{
 		parameter<bool> use_zeroed_initial_alloc_grid := True;
-		parameter<float32> SuitStepFactor := 1073741824.0f;
+		parameter<float32> SuitStepFactor := pow(2.0f, 20.0f);
 	}
 	
 	container units
@@ -144,8 +144,8 @@ container GLOBIO
 		container Suitabilities : LazyCalculated = "True"
 		{
 			unit<upoint> Urban
-//.			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
-			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_urban.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_urban.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -154,8 +154,8 @@ container GLOBIO
 			}
 			
 			unit<upoint> Pasture
-//			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
-			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -164,8 +164,8 @@ container GLOBIO
 			}
 			
 			unit<upoint> Cropland
-//			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
-			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -174,8 +174,8 @@ container GLOBIO
 			}
 			
 			unit<upoint> Forestry
-//			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
-			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
+			:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
 			,   StorageType = "gdal.grid" 
 			,   DialogData  = "Geography/EPSG_4326" 
 			{    
@@ -268,14 +268,15 @@ container GLOBIO
 		
 		attribute<Float32> UsageReductionFactor (domain) := collect_by_cond(domain, compact_condition, SourceData/UsageReductionFactor/ReadData);
 		
-		container SuitabilityMaps
+		container SuitabilityMaps // implement integrity check not larger than 1.0
 		{
-			attribute<Int32> Urban(domain)     := (collect_by_cond(domain, compact_condition, Suitabilities/Urban)    * UsageReductionFactor * parameters/SuitStepFactor)[Int32];
-			attribute<Int32> Pasture(domain)   := (collect_by_cond(domain, compact_condition, Suitabilities/Pasture)  * UsageReductionFactor * parameters/SuitStepFactor)[Int32];
-			attribute<Int32> Cropland(domain)  := (collect_by_cond(domain, compact_condition, Suitabilities/Cropland) * UsageReductionFactor * parameters/SuitStepFactor)[Int32];
-			attribute<Int32> Forestry(domain)  := (collect_by_cond(domain, compact_condition, Suitabilities/Forestry) * UsageReductionFactor * parameters/SuitStepFactor)[Int32];
+			attribute<int32> plateau_augmentation_factor (domain) := int32(mod(uint32(id(domain)), uint32(pow(2f,10f))));
+			attribute<Int32> Urban(domain)     := int32(collect_by_cond(domain, compact_condition, Suitabilities/Urban)    * UsageReductionFactor * parameters/SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> Pasture(domain)   := int32(collect_by_cond(domain, compact_condition, Suitabilities/Pasture)  * UsageReductionFactor * parameters/SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> Cropland(domain)  := int32(collect_by_cond(domain, compact_condition, Suitabilities/Cropland) * UsageReductionFactor * parameters/SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> Forestry(domain)  := int32(collect_by_cond(domain, compact_condition, Suitabilities/Forestry) * UsageReductionFactor * parameters/SuitStepFactor) + plateau_augmentation_factor;
 			attribute<Int32> RangeLand(domain) := Pasture;
-			attribute<Int32> Other(domain)     := const(0i, domain);
+			attribute<Int32> Other(domain)     := const(0i, domain) + plateau_augmentation_factor;
 		}
 		
 		attribute<SourceData/Regions/regio> regio_rel (domain) := collect_by_cond(domain, compact_condition, SourceData/Regions/IMAGE/ReadData);
@@ -315,17 +316,12 @@ container GLOBIO
 			attribute<int32> OrgSuitabilityMap(domain) := ='Compacted/SuitabilityMaps/' + landuse_name;
 			attribute<int32> SuitabilityMap(domain) := suitability_augmentation_mask ? OrgSuitabilityMap : -1i, LazyCalculated = "True";
 			
-			attribute<int64> Rank_1(domain) := int64(SuitabilityMap), LazyCalculated = "True";
-			attribute<int64> Rank_2(domain) := Rank_1 * int64(#domain), LazyCalculated = "True";
-			attribute<int64> Rank_3(domain) := domain/ordinal;
-			attribute<int64> Rank_4(domain) := Rank_2 - Rank_3, LazyCalculated = "True";
-			
-			attribute<int64> Rank(domain) := - Rank_4, LazyCalculated = "True";
+			attribute<int32> Rank(domain) := - SuitabilityMap, LazyCalculated = "True";
 			
 			Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/Area/' + landuse_name;
 				
-			attribute<int64> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, float64(AreaClaim), float64(Compacted/Area), Compacted/regio_rel);
-			attribute<int64> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i64), KeepData = "True";
+			attribute<int32> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, float64(AreaClaim), float64(Compacted/Area), Compacted/regio_rel);
+			attribute<int32> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i32), KeepData = "True";
 			
 			attribute<bool>  allocate(domain) := Rank < zaaglijn[Compacted/regio_rel], LazyCalculated = "True";
 			attribute<LanduseType> adjusted_alloc_state(domain) := allocate ? CurrLanduseType_rel : org_alloc_state, LazyCalculated = "True";

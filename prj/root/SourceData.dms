@@ -68,6 +68,7 @@ container SourceData: LazyCalculated = "True"
 				, units/km2
 			);
 			attribute<string> Label := Countries, DialogType = "LabelText";
+			attribute<string> name := AsItemName(Region); // sanitized for item naming
 		}	
 	}
 	

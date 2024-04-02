@@ -89,4 +89,43 @@ container Templates
 		attribute<units/km2> area_allocated (domain) := allocate ? Compacted/area : 0[units/km2], LazyCalculated = "True";
 		attribute<float32> area_per_regio (SourceData/Regions/regio) := sum(area_allocated, Compacted/regio_rel);
 	}
+	
+	Template MakeCompactedRegionDomain
+	{
+		// begin case parameters
+		parameter<uint8>  region;
+		// end case parameters
+		
+		parameter<string> region_name := /SourceData/Regions/regio/Label[region];
+		
+		attribute<Bool> compact_condition(Geography/world_domain) := and(not(SourceData/Suitabilities/NotAllocatable/ReadData), SourceData/Regions/IMAGE/ReadData==region);
+		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
+		{
+			attribute<int64> ordinal(.) := collect_by_cond(domain, compact_condition, Geography/world_domain/ordinal);
+		}
+		attribute<domain> BaseGrid(Geography/world_domain) := recollect_by_cond(compact_condition, id(domain));
+
+		attribute<LandUseCode> CurrentLandUseCode (domain) := collect_by_cond(domain, compact_condition, SourceData/CurrentLanduse/ESA_CCI/GridData);
+
+		attribute<units/km2> area(domain)  := collect_by_cond(domain, compact_condition, SourceData/area/ReadData)[units/km2];
+		
+		attribute<Float32> UsageReductionFactor (domain) := collect_by_cond(domain, compact_condition, SourceData/UsageReductionFactor/ReadData);
+		
+		container SuitabilityMaps // implement integrity check not larger than 1.0
+		{
+			attribute<int32> plateau_augmentation_factor (domain) := int32(mod(uint32(id(domain)), uint32(pow(2f,10f))));
+			parameter<float32> SuitStepFactor := pow(2.0f, 20.0f);
+			attribute<Int32> Urban(domain)     := int32(collect_by_cond(domain, compact_condition, Suitabilities/Urban)    * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> Pasture(domain)   := int32(collect_by_cond(domain, compact_condition, Suitabilities/Pasture)  * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> Cropland(domain)  := int32(collect_by_cond(domain, compact_condition, Suitabilities/Cropland) * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> Forestry(domain)  := int32(collect_by_cond(domain, compact_condition, Suitabilities/Forestry) * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
+			attribute<Int32> RangeLand(domain) := Pasture;
+			attribute<Int32> Other(domain)     := const(0i, domain) + plateau_augmentation_factor;
+		}
+		
+		attribute<SourceData/Regions/regio> regio_rel (domain) := collect_by_cond(domain, compact_condition, SourceData/Regions/IMAGE/ReadData);
+		
+		parameter<bool> use_zeroed_initial_alloc_grid := True; // necessary for nth-element allocation
+		attribute<LandUseType> initial_alloc_state(domain) := = use_zeroed_initial_alloc_grid ? 'const(LandUseType/V/other, domain)' : 'CurrentLandUseCode->LandUseType_rel';
+	}
 }

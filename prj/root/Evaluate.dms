@@ -1,0 +1,102 @@
+container Evaluate
+{
+	container reference
+	{
+		unit<upoint> python_world
+		: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled.tif" 
+		, StorageType = "gdal.grid"
+		, DialogData        = "Geography/EPSG_4326"
+		, StorageReadOnly = "True"
+		, LazyCalculated = "True"
+		{
+			attribute<LanduseCode> GridData;
+			attribute<LanduseCode> ReadData (grid_domain);
+			
+			attribute<LandUseType> LanduseType_rel(grid_domain) := MakeDefined(LandUseCode/LandUseType_rel, LandUseType/V/Other)[ReadData], LazyCalculated = "True";
+		}
+		
+//			attribute<uint8> globio_results_compacted (domain) := collect_by_cond(domain, compacted/compact_condition, python_world/ReadData);
+	}
+	
+	container geodms_result
+	{
+		unit<upoint> dms_world := grid_domain
+		, StorageName = "%GlobioSourceDataDir%/output/WeightedNthElement.tif" 
+		, StorageType = "gdal.grid"
+		, DialogData        = "Geography/EPSG_4326"
+		, StorageReadOnly = "True"
+		, LazyCalculated = "True"
+		{
+			attribute<LanduseCode> GridData;
+			
+			attribute<LandUseType> LanduseType_rel := MakeDefined(LandUseCode/LandUseType_rel, LandUseType/V/Other)[GridData];
+		}
+	}
+	
+	attribute<bool> is_different(grid_domain) := reference/python_world/LanduseType_rel != geodms_result/dms_world/LandUseType_rel, KeepData = "True" // 1 Gb.
+	{
+		attribute<LandUseType> python(grid_domain) := is_different ? reference/python_world/LanduseType_rel  : null_b[LandUseType], LazyCalculated = "True", KeepData = "False";
+		attribute<LandUseType> geodms(grid_domain) := is_different ? geodms_result/dms_world/LanduseType_rel : null_b[LandUseType], LazyCalculated = "True", KeepData = "False";
+	}
+	
+	container indicators 
+	{
+		unit<uint8> Urban := SourceData/Regions/regio
+			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_urban.csv" 
+			, StorageType = "gdalwrite.vect"
+			, StorageReadOnly = "False"
+		{
+			attribute<uint32> python_num_urban_cells  := sum_uint32(reference/python_world/ReadData==1b, SourceData/Regions/IMAGE/ReadData);
+			attribute<Float64> python_area  := sum_float64(Float32(reference/python_world/ReadData==1b) * SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);
+			attribute<Float64> geodms_area  := sum_float64(Float32(geodms_result/dms_world/LandUseType_rel==LandUseType/V/Urban) * SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);
+			attribute<uint32> geodms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==1b, SourceData/Regions/IMAGE/ReadData);
+			attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
+			attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
+		}
+		
+		unit<uint8> Cropland := SourceData/Regions/regio
+			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_cropland.csv" 
+			, StorageType = "gdalwrite.vect"
+			, StorageReadOnly = "False"
+		{
+			attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==10b, SourceData/Regions/IMAGE/ReadData);
+			attribute<uint32> dms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==10b, SourceData/Regions/IMAGE/ReadData);
+			attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
+			attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
+		}
+		
+		unit<uint8> Forestry := SourceData/Regions/regio
+			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_forestry.csv" 
+			, StorageType = "gdalwrite.vect"
+			, StorageReadOnly = "False"
+		{
+			attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==30b, SourceData/Regions/IMAGE/ReadData);
+			attribute<uint32> dms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==30b, SourceData/Regions/IMAGE/ReadData);
+			attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
+			attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
+		}
+		
+		unit<uint8> Pasture := SourceData/Regions/regio
+			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_pasture.csv" 
+			, StorageType = "gdalwrite.vect"
+			, StorageReadOnly = "False"
+		{
+			attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==21b, SourceData/Regions/IMAGE/ReadData);
+			attribute<uint32> dms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==21b, SourceData/Regions/IMAGE/ReadData);
+			attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
+			attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
+		}
+		
+		unit<uint8> Rangeland := SourceData/Regions/regio
+			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_rangeland.csv" 
+			, StorageType = "gdalwrite.vect"
+			, StorageReadOnly = "False"
+		{
+			attribute<uint32> globio_num_urban_cells := sum_uint32(reference/globio_world/ReadData==22b, SourceData/Regions/IMAGE/ReadData);
+			attribute<uint32> dms_num_urban_cells    := sum_uint32(geodms_result/dms_world/GridData==22b, SourceData/Regions/IMAGE/ReadData);
+			attribute<float32> fraction               := float32(globio_num_urban_cells) / float32(dms_num_urban_cells);
+			attribute<float32> difference             := float32(globio_num_urban_cells) - float32(dms_num_urban_cells);
+		}
+		
+	}
+}

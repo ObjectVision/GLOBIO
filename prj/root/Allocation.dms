@@ -1,0 +1,46 @@
+container Allocation
+{
+	//container per_
+	
+	container allocate_weighted_nth_element
+	{
+		container Urban     := Templates/AllocateWeightedNthElement(LanduseType/V/Urban,     Compacted/initial_alloc_state);
+		container Cropland  := Templates/AllocateWeightedNthElement(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
+		container Forestry  := Templates/AllocateWeightedNthElement(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
+		container Pasture   := Templates/AllocateWeightedNthElement(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
+		container Rangeland := Templates/AllocateWeightedNthElement(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
+
+		attribute<LandUseType> Landuse (domain) := rangeland/adjusted_alloc_state;
+		container MakeGrid := Templates/MakeGrid_t(landuse, 'WeightedNthElement');
+	}
+	
+	container allocate_stepwise
+	{
+		container Urban     := Templates/SteppedAllocateLanduse(LanduseType/V/Urban,     Compacted/initial_alloc_state);
+		container Cropland  := Templates/SteppedAllocateLanduse(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
+		container Forestry  := Templates/SteppedAllocateLanduse(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
+		container Pasture   := Templates/SteppedAllocateLanduse(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
+		container Rangeland := Templates/SteppedAllocateLanduse(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
+
+		attribute<LandUseType> landuse(domain) := Rangeland/adjusted_alloc_state;
+		
+		container MakeGrid := Templates/MakeGrid_t(landuse, 'Stepwise');
+	}
+	
+	container allocate_discrete
+	{
+		container allocate := discrete_alloc(LandUseType/name
+			,domain
+			,Compacted/SuitabilityMaps
+			,LandUseType/partioning_rel
+			,partitioning/Name
+			,AtomicRegions
+			,Compacted/regio_rel
+			,Claims/Scaled, Claims/Scaled
+			,0i
+			,FeasibleSolution
+		);
+		
+		container MakeGrid := Templates/MakeGrid_t(allocate/landuse, 'DiscreteAlloc');
+	}
+}

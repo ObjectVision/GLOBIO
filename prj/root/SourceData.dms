@@ -1,0 +1,124 @@
+container SourceData: LazyCalculated = "True" 
+{
+	container CurrentLanduse
+	{
+		unit<upoint> ESA_CCI
+		:   StorageName = "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif" 
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		,   StorageReadOnly = "True"
+		{    
+		   attribute<LandUseCode> GridData;
+		}
+	}
+	
+	unit<upoint> Area
+	: 	StorageName = "%GlobioSourceDataDir%/input/areakm2_10sec.tif" 
+	,   StorageType = "gdal.grid" 
+	,   DialogData  = "Geography/EPSG_4326" 
+	,   StorageReadOnly = "True"
+	{
+	   attribute<units/km2> GridData;
+	   attribute<units/km2> ReadData(grid_domain);
+	}
+	
+	unit<upoint> UsageReductionFactor
+	: 	StorageName = "%GlobioSourceDataDir%/input/pa_reduce_factor_wdpa_2018_july.tif" 
+	,   StorageType = "gdal.grid" 
+	,   DialogData  = "Geography/EPSG_4326" 
+	,   StorageReadOnly = "True"
+	{
+	   attribute<Float32> GridData;
+	   attribute<Float32> ReadData(grid_domain);
+	}
+	
+	container Regions
+	{
+		unit<upoint> IMAGE
+		:   StorageName = "%GlobioSourceDataDir%/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		,   StorageReadOnly = "True"
+		{    
+		   attribute<regio> GridData;
+		   attribute<regio> ReadData(grid_domain);
+		}
+		
+		parameter<string> underscore := '_';
+		
+		unit<uint8> regio
+		: StorageName = "%GlobioSourceDataDir%/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
+		, StorageType = "gdal.vect"
+		, StorageReadOnly = "True"
+		, KeepData = "True"
+		{
+			attribute<string>    keyString     := string(id(.));
+			
+			container keyLandUseType := for_each_nedv(
+				LandUseType/NameWithClaims 
+				, 'keyString + underscore +' + quote(LandUseType/NameWithClaims)
+				, regio
+				, string
+				);
+			
+			container AreaClaims := for_each_nedv(
+				LandUseType/NameWithClaims 
+				,'rjoin(keyLandUseType/' + LandUseType/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+				, regio
+				, units/km2
+			);
+			attribute<string> Label := Countries, DialogType = "LabelText";
+		}	
+	}
+	
+	container Suitabilities : LazyCalculated = "True"
+	{
+		unit<upoint> Urban
+		:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_urban.tif" 
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		{    
+		   attribute<Float32> GridData;
+		   attribute<Float32> ReadData(grid_domain); 
+		}
+		
+		unit<upoint> Pasture
+		:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		{    
+		   attribute<Float32> GridData;
+		   attribute<Float32> ReadData(grid_domain); 
+		}
+		
+		unit<upoint> Cropland
+		:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		{    
+		   attribute<Float32> GridData;
+		   attribute<Float32> ReadData(grid_domain); 
+		}
+		
+		unit<upoint> Forestry
+		:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
+//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		{    
+		   attribute<Float32> GridData;
+		   attribute<Float32> ReadData(grid_domain); 
+		}
+		
+		unit<upoint> NotAllocatable
+		:   StorageName = "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif"
+		,   DialogData  = "Geography/EPSG_4326" 
+		{    
+		   attribute<Bool> GridData;
+		   attribute<Bool> ReadData(grid_domain); 
+		}
+	}
+}

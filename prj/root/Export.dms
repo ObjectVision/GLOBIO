@@ -1,0 +1,8 @@
+container Export
+{
+	parameter<string> generate_weighted_nth_element := "Ok", ExplicitSuppliers="/Allocation/allocate_weighted_nth_element/MakeGrid/result";
+	parameter<string> generate_stepwise_alloc       := "Ok", ExplicitSuppliers="/Allocation/allocate_stepwise/MakeGrid/result";
+	parameter<string> generate_competitive_alloc    := "Ok", ExplicitSuppliers="/Allocation/allocate_discrete/MakeGrid/result";
+	
+	parameter<string> generate_all := generate_weighted_nth_element + generate_stepwise_alloc + generate_competitive_alloc;
+}

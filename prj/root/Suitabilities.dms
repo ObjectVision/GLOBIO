@@ -1,0 +1,7 @@
+container Suitabilities : LazyCalculated = "True"
+{
+	attribute<Float32> Urban   (Geography/world_domain) := SourceData/Suitabilities/Urban/ReadData;
+	attribute<Float32> Pasture (Geography/world_domain) := SourceData/Suitabilities/Pasture/ReadData;
+	attribute<Float32> Cropland(Geography/world_domain) := SourceData/Suitabilities/Cropland/ReadData;
+	attribute<Float32> Forestry(Geography/world_domain) := SourceData/Suitabilities/Forestry/ReadData;
+}

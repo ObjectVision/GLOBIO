@@ -1,0 +1,55 @@
+container parameters
+{
+	// scenario parameters
+	parameter<string> ScenarioYear 					:= '1970';
+	parameter<string> LanduseCodes         	 		:= '1|10|11|12|30|21|22|40|0';
+	
+	unit<uint8> lu_class := cat_range(uint8, 0b, uint8(strcount(LanduseCodes, '|')+1))
+	{
+		attribute<uint32> lu_code := uint32(readlines(replace(LanduseCodes, '|', '\n'), ., 0));
+	}
+	
+	parameter<string> LanduseNames			 		:= "Urban|Cropland|Cropland high intensive|Cropland low intensive|Forestry|Pasture|Rangeland|secondary vegetation|undefined";
+	parameter<string> LandusePriorityCodes   		:= "1|10|30|21|22";	
+	parameter<uint32> LanduseReplaceWithCode 		:= 40;
+	parameter<uint32> LanduseUndefinedCode   		:= 0;
+	parameter<string> CellSize 						:= "10sec";
+	parameter<string> CellSizeStr 					:= "10";
+	// parameter<string> Extent := "wlrd";
+	
+	// base directories
+	//parameter<string> InDir  						:= "$ProjectScenario;\input";
+	//parameter<string> OutDir 						:= "$ProjectScenario;\output";
+	
+	// initial landuse, regions, params 
+	parameter<string> Regions          	     		:= "$RegionDir;\ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif";
+	parameter<string> Landuse		   	     		:= "$LuDir;\ESACCI_GLOBIO_1992_water1992-2015.tif";
+	
+	// restrictions
+	parameter<string> NotAllocatableAreas    		:= "$NotAllocDir;\not_allocatable_ESA-CCI_1992-2015.tif";
+	parameter<string> PAReduceFactor         		:= "$PaDir;\pa_reduce_factor_wdpa_2018_july.tif"; // for example protected areas
+	
+	// suitabilities
+	parameter<string> SuitRasterCodes 		 		:= "1|10|21|22|30";
+	parameter<string> SuitRasterNames        		:= "$SuitDir;\suit_urban.tif|$SuitDir;\suit_crop_lu_diff_no_wtr_ice_0.tif|$SuitDir;\suit_pasture_lu_diff_no_wtr.tif|$SuitDir;\suit_pasture_lu_diff_no_wtr.tif|$SuitDir;\suit_forestry_2015.tif"; // suitability maps
+	parameter<string> ScenSuitRasterWeights  		:= "0.0|0.0|0.0|0.0|0.0";
+
+	
+
+	// claims
+	parameter<string> ClaimFileName 		 		:= "ClaimFileName = $InDir;\Claim$ScenarioYear;.csv";
+	parameter<string> ClaimRegionFieldName 	 		:= "Region";
+	parameter<string> ClaimLanduseFieldName  		:= "Attribute";
+	parameter<string> ClaimAreaFieldName 	 		:= "Value";
+	parameter<string> CellAreas                     := "$InDir;\areakm2_$CellSizeStr;sec.tif";
+	  
+	// cropland intensity adjustment
+	parameter<string> LandUseCodeCrops 		 	    := "10";
+	parameter<string> LandUseCodeCropsHighIntensive := "11";
+	parameter<string> LandUseCodeCropsLowIntensive 	:= "12";
+	
+	// output filenames
+	parameter<string> OutAllocatedLanduse  			:= "$OutDir;\Globio4_landuse_$CellSizeStr;sec_$ScenarioYear;_$ExtentStr;.tif";
+	parameter<string> OutAllocatedLanduseCropInt 	:= "$OutDir;\Globio4_landuse_$CellSizeStr;sec_$ScenarioYear;_$ExtentStr;_crop_int.tif";
+	parameter<string> OutRegionLanduseAreasFileName := "$OutDir;\regio_landuse_areas_$CellSizeStr;sec_$ScenarioName;_$ScenarioYear;_$ExtentStr;.csv";
+}

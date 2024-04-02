@@ -1,0 +1,44 @@
+container Claims
+{
+	unit<uint8> ClaimTable
+	:   StorageName = "%GlobioSourceDataDir%/input/Claim1970.csv" 
+	,   StorageType = "gdal.vect"
+	,   StorageReadOnly = "True"
+	{
+		attribute<uint8>     Region;
+		attribute<string>    Class   := Attribute;
+		attribute<units/km2> Claim   := Value[units/km2];
+		attribute<string>    key     := String(Region) + '_' + Class;
+	}
+	
+	attribute<float32> scale_factors (SourceData/Regions/regio) := mean(SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);
+	
+	parameter<string> underscore := '_';
+	attribute<string>    keyString (SourceData/Regions/regio) := string(id(SourceData/Regions/regio));
+
+	container keyLandUseType := for_each_nedv(LandUseType/NameWithClaims 
+		, 'keyString + underscore +' + quote(LandUseType/NameWithClaims)
+		, SourceData/Regions/regio
+		, string
+	);
+
+	container Area := for_each_nedv(LandUseType/NameWithClaims 
+		,'rjoin(keyLandUseType/' + LandUseType/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+		, SourceData/Regions/regio
+		, units/km2
+	)
+	{
+		attribute<uint32> Other (SourceData/Regions/regio) := const(4000000000, SourceData/Regions/regio);
+	}
+	
+	container Scaled := for_each_nedv(
+		  LandUseType/NameWithClaims
+		, 'UInt32(Area/' + LandUseType/NameWithClaims  + '/ scale_factors[units/km2])'
+		, SourceData/Regions/regio
+		, uint32
+	
+	)
+	{
+		attribute<uint32> Other (SourceData/Regions/regio) := Area/Other;
+	}
+}

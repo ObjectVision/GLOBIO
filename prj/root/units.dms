@@ -1,0 +1,6 @@
+container units
+{
+	unit<float32> m   := baseunit('m', float32);
+	unit<float32> km  := 1000 * m;
+	unit<float32> km2 := km * km;
+}

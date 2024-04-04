@@ -1,5 +1,22 @@
 container Templates
 {
+	Template ReadSuitabilityData
+	{
+		// begin case parameters
+		parameter<string> suitability_filename;
+		// end case parameters
+		
+		unit<upoint> domain
+		:   StorageName = '=suitability_filename'
+		,   StorageType = "gdal.grid" 
+		,   DialogData  = "Geography/EPSG_4326" 
+		{    
+		   attribute<Float32> GridData;
+		   attribute<Float32> ReadData(grid_domain); 
+		}
+				
+	}
+	
 	Template MakeGrid_t {
 		// begin case parameters
 		attribute<Bool> compact_condition(Geography/world_domain);
@@ -73,7 +90,7 @@ container Templates
 		
 		parameter<string> region_name := /SourceData/Regions/regio/Label[region];
 		
-		attribute<Bool> compact_condition(Geography/world_domain) := and(not(SourceData/Suitabilities/NotAllocatable/ReadData), region==255b ? True : SourceData/Regions/IMAGE/ReadData==region);
+		attribute<Bool> compact_condition(Geography/world_domain) := and(not(SourceData/NotAllocatable/ReadData), region==255b ? True : SourceData/Regions/IMAGE/ReadData==region);
 		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
 		{
 			attribute<int64> ordinal(.) := collect_by_cond(domain, compact_condition, Geography/world_domain/ordinal);
@@ -86,16 +103,26 @@ container Templates
 		
 		attribute<Float32> UsageReductionFactor (domain) := collect_by_cond(domain, compact_condition, SourceData/UsageReductionFactor/ReadData);
 		
-		container SuitabilityMaps // implement integrity check not larger than 1.0
+		attribute<int32> plateau_augmentation_factor (domain) := int32(mod(uint32(id(domain)), uint32(pow(2f,10f))));
+		parameter<float32> SuitStepFactor := pow(2.0f, 20.0f);
+		/*container SuitabilityMaps // implement integrity check not larger than 1.0
 		{
-			attribute<int32> plateau_augmentation_factor (domain) := int32(mod(uint32(id(domain)), uint32(pow(2f,10f))));
-			parameter<float32> SuitStepFactor := pow(2.0f, 20.0f);
 			attribute<Int32> Urban(domain)     := int32(collect_by_cond(domain, compact_condition, Suitabilities/Urban)    * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
 			attribute<Int32> Pasture(domain)   := int32(collect_by_cond(domain, compact_condition, Suitabilities/Pasture)  * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
 			attribute<Int32> Cropland(domain)  := int32(collect_by_cond(domain, compact_condition, Suitabilities/Cropland) * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
 			attribute<Int32> Forestry(domain)  := int32(collect_by_cond(domain, compact_condition, Suitabilities/Forestry) * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor;
 			attribute<Int32> RangeLand(domain) := Pasture;
 			attribute<Int32> Other(domain)     := const(0i, domain) + plateau_augmentation_factor;
+		}*/
+		
+		container SuitabilityMaps := for_each_nedv (
+		  parameters/final/SuitRasterName
+		, 'int32(collect_by_cond(domain, compact_condition, Suitabilities/' + parameters/final/SuitRasterName + ')    * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor'
+		, domain
+		, int32
+		)
+		{
+			attribute<Float32> Other(domain) := const(0f, domain);
 		}
 		
 		attribute<SourceData/Regions/regio> regio_rel (domain) := collect_by_cond(domain, compact_condition, SourceData/Regions/IMAGE/ReadData);

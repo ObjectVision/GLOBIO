@@ -22,6 +22,14 @@ container SourceData: LazyCalculated = "True"
 	   attribute<units/km2> ReadData(grid_domain);
 	}
 	
+	unit<upoint> NotAllocatable
+	:   StorageName = '=parameters/final/NotAllocatableAreas'
+	,   DialogData  = "Geography/EPSG_4326" 
+	{    
+	   attribute<Bool> GridData;
+	   attribute<Bool> ReadData(grid_domain); 
+	}
+	
 	unit<upoint> UsageReductionFactor
 	: 	StorageName = '=parameters/final/PAReduceFactor'
 	,   StorageType = "gdal.grid" 
@@ -72,6 +80,13 @@ container SourceData: LazyCalculated = "True"
 		}	
 	}
 	
+	container Suitabilities_dynamic := for_each_ind(
+	  'ne'                                       // options
+	, parameters/final/SuitRasterName
+    ,'Templates/ReadSuitabilityData(' + quote(parameters/final/SuitRasterNames) + ')' 		    // name
+   );//, LazyCalculated = "True"; 
+
+	
 	container Suitabilities : LazyCalculated = "True"
 	{
 		unit<upoint> Urban
@@ -108,14 +123,6 @@ container SourceData: LazyCalculated = "True"
 		{    
 		   attribute<Float32> GridData;
 		   attribute<Float32> ReadData(grid_domain); 
-		}
-		
-		unit<upoint> NotAllocatable
-		:   StorageName = '=parameters/final/NotAllocatableAreas'
-		,   DialogData  = "Geography/EPSG_4326" 
-		{    
-		   attribute<Bool> GridData;
-		   attribute<Bool> ReadData(grid_domain); 
 		}
 	}
 }

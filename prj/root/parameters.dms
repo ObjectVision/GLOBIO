@@ -23,7 +23,7 @@ container parameters
 		
 		// suitabilities
 		parameter<string> SuitRasterCodes 		        := "1|10|21|22|30";
-		parameter<string> SuitRasterNames        		:= "$SuitDir;\suit_urban.tif|$SuitDir;\suit_crop_lu_diff_no_wtr_ice_0.tif|$SuitDir;\suit_pasture_lu_diff_no_wtr.tif|$SuitDir;\suit_pasture_lu_diff_no_wtr.tif|$SuitDir;\suit_forestry_2015.tif"; // suitability maps
+		parameter<string> SuitRasterNames        		:= "%GlobioSourceDataDir%/input/suit_urban.tif|%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif|%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif|%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif|%GlobioSourceDataDir%/input/suit_forestry_2015.tif";
 		parameter<string> ScenSuitRasterWeights  		:= "0.0|0.0|0.0|0.0|0.0";
 
 		// claims
@@ -65,8 +65,10 @@ container parameters
 		
 		// suitabilities
 		attribute<uint32> SuitRasterCodes       (intermediate/suitabilities_domain)  := intermediate/suitabilities_domain/code;
-		attribute<string> SuitRasterNames 	  (intermediate/suitabilities_domain)  := intermediate/suitabilities_domain/name;
+		attribute<string> SuitRasterNames 	  (intermediate/suitabilities_domain)  := intermediate/suitabilities_domain/filename;
+		attribute<string> SuitRasterName (intermediate/suitabilities_domain) := intermediate/suitabilities_domain/name; 
 		attribute<float32> ScenSuitRasterWeights (intermediate/suitabilities_domain) := intermediate/suitabilities_domain/weights;
+
 		
 		// claims
 		parameter<string> ClaimFileName 		  := "ClaimFileName = $InDir;\Claim$ScenarioYear;.csv";
@@ -102,9 +104,12 @@ container parameters
 			
 			unit<uint8> suitabilities_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/SuitRasterCodes, '|')+1))
 			{
-				attribute<uint32>  code    := uint32(readlines(replace(parameters/input/SuitRasterCodes, '|', '\n'), ., 0));
-				attribute<string>  name    := readlines(replace(parameters/input/SuitRasterNames, '|', '\n'), ., 0);
-				attribute<float32> weights := float32(readlines(replace(parameters/input/ScenSuitRasterWeights, '|', '\n'), ., 0));
+				attribute<uint32>  code     := uint32(readlines(replace(parameters/input/SuitRasterCodes, '|', '\n'), ., 0));
+				attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
+				attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
+				
+				attribute<string>  filename := readlines(replace(parameters/input/SuitRasterNames, '|', '\n'), ., 0);
+				attribute<float32> weights  := float32(readlines(replace(parameters/input/ScenSuitRasterWeights, '|', '\n'), ., 0));
 			}
 		}
 	}

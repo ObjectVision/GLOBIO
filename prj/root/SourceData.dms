@@ -75,8 +75,7 @@ container SourceData: LazyCalculated = "True"
 	container Suitabilities : LazyCalculated = "True"
 	{
 		unit<upoint> Urban
-		:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_urban.tif" 
+		:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif"			
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		{    
@@ -86,7 +85,6 @@ container SourceData: LazyCalculated = "True"
 		
 		unit<upoint> Pasture
 		:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_pasture.tif" 
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		{    
@@ -96,7 +94,6 @@ container SourceData: LazyCalculated = "True"
 		
 		unit<upoint> Cropland
 		:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_crop.tif" 
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		{    
@@ -105,8 +102,7 @@ container SourceData: LazyCalculated = "True"
 		}
 		
 		unit<upoint> Forestry
-		:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif" 
-//			:   StorageName = "%GlobioSourceDataDir%/Intermediate/suit_forestry.tif" 
+		:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif"
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		{    
@@ -115,7 +111,7 @@ container SourceData: LazyCalculated = "True"
 		}
 		
 		unit<upoint> NotAllocatable
-		:   StorageName = "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif"
+		:   StorageName = '=parameters/final/NotAllocatableAreas'
 		,   DialogData  = "Geography/EPSG_4326" 
 		{    
 		   attribute<Bool> GridData;

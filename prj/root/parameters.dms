@@ -18,7 +18,7 @@ container parameters
 		parameter<string> Landuse		   	     		:= "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif";
 		
 		// restrictions
-		parameter<string> NotAllocatableAreas    		:= "$NotAllocDir;\not_allocatable_ESA-CCI_1992-2015.tif";
+		parameter<string> NotAllocatableAreas    		:= "%GlobioSourceDataDir%/input/not_allocatable_ESA-CCI_1992-2015.tif";
 		parameter<string> PAReduceFactor         		:= "%GlobioSourceDataDir%/input/pa_reduce_factor_wdpa_2018_july.tif"; // for example protected areas
 		
 		// suitabilities

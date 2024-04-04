@@ -94,7 +94,9 @@ container parameters
 			
 			unit<uint8> lu_prio_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LandusePriorityCodes, '|')+1))
 			{
-				attribute<uint32> code := uint32(readlines(replace(parameters/input/LanduseCodes, '|', '\n'), ., 0));
+				attribute<uint32> code := uint32(readlines(replace(parameters/input/LandusePriorityCodes, '|', '\n'), ., 0));
+				attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
+				attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
 			}
 			
 			unit<uint8> suitabilities_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/SuitRasterCodes, '|')+1))

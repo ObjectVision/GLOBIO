@@ -15,7 +15,7 @@ container parameters
 		
 		// regions, initial landuse
 		parameter<string> Regions          	            := "%GlobioSourceDataDir%/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif";
-		parameter<string> Landuse		   	     		:= "$LuDir;\ESACCI_GLOBIO_1992_water1992-2015.tif";
+		parameter<string> Landuse		   	     		:= "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif";
 		
 		// restrictions
 		parameter<string> NotAllocatableAreas    		:= "$NotAllocDir;\not_allocatable_ESA-CCI_1992-2015.tif";

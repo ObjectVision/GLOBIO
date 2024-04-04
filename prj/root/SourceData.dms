@@ -3,7 +3,7 @@ container SourceData: LazyCalculated = "True"
 	container CurrentLanduse
 	{
 		unit<upoint> ESA_CCI
-		:   StorageName = "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif" 
+		:   StorageName = '=parameters/final/Landuse'
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		,   StorageReadOnly = "True"
@@ -35,7 +35,7 @@ container SourceData: LazyCalculated = "True"
 	container Regions
 	{
 		unit<upoint> IMAGE
-		:   StorageName = '=parameters/input/Regions'
+		:   StorageName = '=parameters/final/Regions'
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		,   StorageReadOnly = "True"

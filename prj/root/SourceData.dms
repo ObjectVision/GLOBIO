@@ -35,7 +35,7 @@ container SourceData: LazyCalculated = "True"
 	container Regions
 	{
 		unit<upoint> IMAGE
-		:   StorageName = "%GlobioSourceDataDir%/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif"
+		:   StorageName = '=parameters/input/Regions'
 		,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		,   StorageReadOnly = "True"

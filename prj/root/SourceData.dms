@@ -23,7 +23,7 @@ container SourceData: LazyCalculated = "True"
 	}
 	
 	unit<upoint> UsageReductionFactor
-	: 	StorageName = "%GlobioSourceDataDir%/input/pa_reduce_factor_wdpa_2018_july.tif" 
+	: 	StorageName = '=parameters/final/PAReduceFactor'
 	,   StorageType = "gdal.grid" 
 	,   DialogData  = "Geography/EPSG_4326" 
 	,   StorageReadOnly = "True"

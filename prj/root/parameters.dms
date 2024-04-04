@@ -19,7 +19,7 @@ container parameters
 		
 		// restrictions
 		parameter<string> NotAllocatableAreas    		:= "$NotAllocDir;\not_allocatable_ESA-CCI_1992-2015.tif";
-		parameter<string> PAReduceFactor         		:= "$PaDir;\pa_reduce_factor_wdpa_2018_july.tif"; // for example protected areas
+		parameter<string> PAReduceFactor         		:= "%GlobioSourceDataDir%/input/pa_reduce_factor_wdpa_2018_july.tif"; // for example protected areas
 		
 		// suitabilities
 		parameter<string> SuitRasterCodes 		        := "1|10|21|22|30";
@@ -51,6 +51,7 @@ container parameters
 		attribute<uint32> LanduseCodes (intermediate/lu_full_domain) 		   := intermediate/lu_full_domain/code;
 		attribute<string> LanduseNames (intermediate/lu_full_domain) 		   := intermediate/lu_full_domain/name;
 		attribute<uint32> LandusePriorityCodes (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/code;
+		attribute<string> LandusePriorityNames (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/name;
 		parameter<uint32> LanduseReplaceWithCode 		                       := parameters/input/LanduseReplaceWithCode;
 		parameter<uint32> LanduseUndefinedCode   							   := parameters/input/LanduseUndefinedCode;
 		

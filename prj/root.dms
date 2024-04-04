@@ -57,7 +57,7 @@ container GLOBIO
 	#include <Claims.dms>
 	#include <Compacted.dms>
 	
-	unit<uint32> domain := Compacted/domain;
+	//unit<uint32> domain := Compacted/domain;
 	
 	container FeasibleSolution;
 	

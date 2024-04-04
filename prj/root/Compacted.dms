@@ -1,4 +1,7 @@
-container Compacted
+container Compacted := Templates/MakeCompactedRegion(255b);
+
+/*
+
 {
 	attribute<Bool> compact_condition(Geography/world_domain) := not(SourceData/Suitabilities/NotAllocatable/ReadData);
 	unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
@@ -30,4 +33,4 @@ container Compacted
 	
 	parameter<bool> use_zeroed_initial_alloc_grid := True; // necessary for nth-element allocation
 	attribute<LandUseType> initial_alloc_state(domain) := = use_zeroed_initial_alloc_grid ? 'const(LandUseType/V/other, domain)' : 'CurrentLandUseCode->LandUseType_rel';
-}
+}*/

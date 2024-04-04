@@ -3,21 +3,21 @@ container Allocation
 	container per_region := for_each_ne
 	(
 		  SourceData/Regions/regio/name
-		, 'Templates/MakeCompactedRegionDomain(uint8(' + SourceData/Regions/regio/Nr + '))'
+		, 'Templates/AllocateNthElementWeightedPerRegion(uint8(' + SourceData/Regions/regio/Nr + '))'
 	);
 	
 	container world
 	{
 		container allocate_weighted_nth_element
 		{
-			container Urban     := Templates/AllocateWeightedNthElement(LanduseType/V/Urban,     Compacted/initial_alloc_state);
-			container Cropland  := Templates/AllocateWeightedNthElement(LanduseType/V/Cropland,  Urban/adjusted_alloc_state);
-			container Forestry  := Templates/AllocateWeightedNthElement(LanduseType/V/Forestry,  Cropland/adjusted_alloc_state);
-			container Pasture   := Templates/AllocateWeightedNthElement(LanduseType/V/Pasture,   Forestry/adjusted_alloc_state);
-			container Rangeland := Templates/AllocateWeightedNthElement(LanduseType/V/Rangeland, Pasture/adjusted_alloc_state);
+			container Urban     := Templates/AllocateWeightedNthElement(LanduseType/V/Urban,     Compacted/domain, Compacted/initial_alloc_state);
+			container Cropland  := Templates/AllocateWeightedNthElement(LanduseType/V/Cropland,  Compacted/domain, Urban/adjusted_alloc_state);
+			container Forestry  := Templates/AllocateWeightedNthElement(LanduseType/V/Forestry,  Compacted/domain, Cropland/adjusted_alloc_state);
+			container Pasture   := Templates/AllocateWeightedNthElement(LanduseType/V/Pasture,   Compacted/domain, Forestry/adjusted_alloc_state);
+			container Rangeland := Templates/AllocateWeightedNthElement(LanduseType/V/Rangeland, Compacted/domain, Pasture/adjusted_alloc_state);
 
-			attribute<LandUseType> Landuse (domain) := rangeland/adjusted_alloc_state;
-			container MakeGrid := Templates/MakeGrid_t(landuse, 'WeightedNthElement');
+			attribute<LandUseType> Landuse (compacted/domain) := rangeland/adjusted_alloc_state;
+			container MakeGrid := Templates/MakeGrid_t(compacted/domain, landuse, 'WeightedNthElement');
 		}
 
 		container allocate_stepwise
@@ -30,7 +30,7 @@ container Allocation
 
 			attribute<LandUseType> landuse(domain) := Rangeland/adjusted_alloc_state;
 			
-			container MakeGrid := Templates/MakeGrid_t(landuse, 'Stepwise');
+			container MakeGrid := Templates/MakeGrid_t(domain, landuse, 'Stepwise');
 		}
 
 		container allocate_discrete

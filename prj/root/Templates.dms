@@ -1,44 +1,19 @@
 container Templates
 {
 	Template MakeGrid_t {
-		attribute<LandUseType> landuse(domain);			
+		// begin case parameters
+		attribute<Bool> compact_condition(Geography/world_domain);
+		unit<uint32> compacted_domain;
+		attribute<LandUseType> landuse(compacted_domain);			
 		parameter<string> OutputFileName;
+		// end case parameters
 		
-		attribute<LandUseCode> LandUseCode_rel (domain) := landuse->LandUseCode_rel;
+		attribute<LandUseCode> LandUseCode_rel (compacted_domain) := landuse->LandUseCode_rel;
 		
-		attribute<LandUseCode> result(world_domain) := recollect_by_cond(Compacted/compact_condition, LandUseCode_rel)
+		attribute<LandUseCode> result(Geography/world_domain) := recollect_by_cond(compact_condition, LandUseCode_rel)
 		, StorageName = "='%GlobioSourceDataDir%/output/'+OutputFileName+'.TIF'"
 		, StorageType       = "gdalwrite.grid"
 		, DialogData        = "Geography/EPSG_4326";
-	}
-	
-	Template AllocateWeightedNthElement
-	{
-		// begin case parameters
-		parameter<LanduseType>  CurrLanduseType_rel;
-		attribute<LanduseType>  org_alloc_state(domain);
-		// end case parameters
-		
-		parameter<string> landuse_name := CurrLanduseType_rel->name;
-		
-		attribute<Bool> suitability_augmentation_mask (domain) := org_alloc_state == LandUseType/V/other;
-		
-		attribute<int32> OrgSuitabilityMap(domain) := ='Compacted/SuitabilityMaps/' + landuse_name;
-		attribute<int32> SuitabilityMap(domain) := suitability_augmentation_mask ? OrgSuitabilityMap : -1i, LazyCalculated = "True";
-		
-		attribute<int32> Rank(domain) := - SuitabilityMap, LazyCalculated = "True";
-		
-		Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/Area/' + landuse_name;
-			
-		attribute<int32> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, float64(AreaClaim), float64(Compacted/Area), Compacted/regio_rel);
-		attribute<int32> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i32), KeepData = "True";
-		
-		attribute<bool>  allocate(domain) := Rank < zaaglijn[Compacted/regio_rel], LazyCalculated = "True";
-		attribute<LanduseType> adjusted_alloc_state(domain) := allocate ? CurrLanduseType_rel : org_alloc_state, LazyCalculated = "True";
-		
-		attribute<uint32>  sum_per_regio (SourceData/Regions/regio) := sum_uint32(allocate, Compacted/regio_rel);
-		attribute<units/km2> area_allocated (domain) := allocate ? Compacted/area : 0[units/km2], LazyCalculated = "True";
-		attribute<float32> area_per_regio (SourceData/Regions/regio) := sum(area_allocated, Compacted/regio_rel);
 	}
 	
 	Template SteppedAllocateLanduse
@@ -90,15 +65,15 @@ container Templates
 		attribute<float32> area_per_regio (SourceData/Regions/regio) := sum(area_allocated, Compacted/regio_rel);
 	}
 	
-	Template MakeCompactedRegionDomain
+	Template MakeCompactedRegion
 	{
 		// begin case parameters
-		parameter<uint8>  region;
+		parameter<uint8> region; // 255 for all regions
 		// end case parameters
 		
 		parameter<string> region_name := /SourceData/Regions/regio/Label[region];
 		
-		attribute<Bool> compact_condition(Geography/world_domain) := and(not(SourceData/Suitabilities/NotAllocatable/ReadData), SourceData/Regions/IMAGE/ReadData==region);
+		attribute<Bool> compact_condition(Geography/world_domain) := and(not(SourceData/Suitabilities/NotAllocatable/ReadData), region==255b ? True : SourceData/Regions/IMAGE/ReadData==region);
 		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
 		{
 			attribute<int64> ordinal(.) := collect_by_cond(domain, compact_condition, Geography/world_domain/ordinal);
@@ -127,5 +102,57 @@ container Templates
 		
 		parameter<bool> use_zeroed_initial_alloc_grid := True; // necessary for nth-element allocation
 		attribute<LandUseType> initial_alloc_state(domain) := = use_zeroed_initial_alloc_grid ? 'const(LandUseType/V/other, domain)' : 'CurrentLandUseCode->LandUseType_rel';
+	}
+	
+	Template AllocateWeightedNthElement
+	{
+		// begin case parameters
+		parameter<LanduseType> 				CurrLanduseType_rel;
+		unit<uint32> 		   				compacted_domain;
+		attribute<LanduseType> 				org_alloc_state(compacted_domain);
+		attribute<Int32> 	   				ogr_suitability_map (compacted_domain);
+		attribute<units/km2>   				area(compacted_domain);
+		attribute<SourceData/Regions/regio> regio_rel (compacted_domain);
+		// end case parameters
+		
+		parameter<string> landuse_name := CurrLanduseType_rel->name;
+		
+		attribute<Bool> suitability_augmentation_mask (compacted_domain) := org_alloc_state == LandUseType/V/other;
+		
+		//attribute<int32> ogr_suitability_map(compacted_domain) := ='Compacted/SuitabilityMaps/' + landuse_name;
+		attribute<int32> SuitabilityMap(compacted_domain) := suitability_augmentation_mask ? ogr_suitability_map : -1i, LazyCalculated = "True";
+		
+		attribute<int32> Rank(compacted_domain) := - SuitabilityMap, LazyCalculated = "True";
+		
+		Attribute<Float32> AreaClaim (SourceData/Regions/regio) := ='Claims/Area/' + landuse_name;
+			
+		attribute<int32> zaaglijn_org (SourceData/Regions/regio) := Nth_element_weighted(Rank, float64(AreaClaim), float64(area), regio_rel);
+		attribute<int32> zaaglijn(SourceData/Regions/regio) := Min_elem(zaaglijn_org, -1i32), KeepData = "True";
+		
+		attribute<bool> allocate(compacted_domain) := Rank < zaaglijn[regio_rel], LazyCalculated = "True";
+		attribute<LanduseType> adjusted_alloc_state(compacted_domain) := allocate ? CurrLanduseType_rel : org_alloc_state, LazyCalculated = "True";
+		
+		attribute<uint32>  sum_per_regio (SourceData/Regions/regio) := sum_uint32(allocate, regio_rel);
+		attribute<units/km2> area_allocated (compacted_domain) := allocate ? area : 0[units/km2], LazyCalculated = "True";
+		attribute<float32> area_per_regio (SourceData/Regions/regio) := sum(area_allocated, regio_rel);
+	}
+	
+	Template AllocateNthElementWeightedPerRegion
+	{
+		// begin case parameters
+		parameter<uint8> region;
+		// end case parameters
+		
+		container compacted_region := MakeCompactedRegion(region);
+		attribute<LanduseType> initial_alloc_state(compacted_region/domain) := const(LandUseType/V/other, compacted_region/domain);
+		
+		container Urban     := Templates/AllocateWeightedNthElement(LanduseType/V/Urban,     compacted_region/domain, initial_alloc_state, compacted_region/SuitabilityMaps/Urban, compacted_region/area, compacted_region/regio_rel);
+		container Cropland  := Templates/AllocateWeightedNthElement(LanduseType/V/Cropland,  compacted_region/domain, Urban/adjusted_alloc_state, compacted_region/SuitabilityMaps/Cropland, compacted_region/area, compacted_region/regio_rel);
+		container Forestry  := Templates/AllocateWeightedNthElement(LanduseType/V/Forestry,  compacted_region/domain, Cropland/adjusted_alloc_state, compacted_region/SuitabilityMaps/Forestry, compacted_region/area, compacted_region/regio_rel);
+		container Pasture   := Templates/AllocateWeightedNthElement(LanduseType/V/Pasture,   compacted_region/domain, Forestry/adjusted_alloc_state, compacted_region/SuitabilityMaps/Pasture, compacted_region/area, compacted_region/regio_rel);
+		container Rangeland := Templates/AllocateWeightedNthElement(LanduseType/V/Rangeland, compacted_region/domain, Pasture/adjusted_alloc_state, compacted_region/SuitabilityMaps/Rangeland, compacted_region/area, compacted_region/regio_rel);
+
+		attribute<LandUseType> Landuse (compacted_region/domain) := rangeland/adjusted_alloc_state;
+		container MakeGrid := Templates/MakeGrid_t(compacted_region/compact_condition , compacted_region/domain, landuse, 'WeightedNthElement');
 	}
 }

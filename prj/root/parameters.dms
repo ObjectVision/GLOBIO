@@ -31,7 +31,8 @@ container parameters
 		parameter<string> ClaimRegionFieldName 	 	    := "Region";
 		parameter<string> ClaimLanduseFieldName  		:= "Attribute";
 		parameter<string> ClaimAreaFieldName 	 		:= "Value";
-		parameter<string> CellAreas                     := "$InDir;\areakm2_$CellSizeStr;sec.tif";
+		parameter<string> CellAreas                     := "%GlobioSourceDataDir%/input/areakm2_10sec.tif";
+		
 		  
 		// cropland intensity adjustment
 		parameter<string> LandUseCodeCrops 		 	    := "10";
@@ -75,7 +76,7 @@ container parameters
 		parameter<string> ClaimRegionFieldName  := "Region";
 		parameter<string> ClaimLanduseFieldName := "Attribute";
 		parameter<string> ClaimAreaFieldName 	  := "Value";
-		parameter<string> CellAreas             := "$InDir;\areakm2_$CellSizeStr;sec.tif";
+		parameter<string> CellAreas             := parameters/input/CellAreas;
 		
 		// cropland intensity adjustment
 		parameter<LandUseType> LandUseCodeCrops 		 := parameters/input/LandUseCodeCrops[LandUseType];

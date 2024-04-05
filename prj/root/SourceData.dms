@@ -13,7 +13,7 @@ container SourceData: LazyCalculated = "True"
 	}
 	
 	unit<upoint> Area
-	: 	StorageName = "%GlobioSourceDataDir%/input/areakm2_10sec.tif" 
+	: 	StorageName = "=parameters/final/CellAreas" 
 	,   StorageType = "gdal.grid" 
 	,   DialogData  = "Geography/EPSG_4326" 
 	,   StorageReadOnly = "True"

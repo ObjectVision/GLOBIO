@@ -55,7 +55,7 @@ container SourceData: LazyCalculated = "True"
 		parameter<string> underscore := '_';
 		
 		unit<uint8> regio
-		: StorageName = "%GlobioSourceDataDir%/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
+		: StorageName = "= parameters/final/RegionsMetainfo" //%GlobioSourceDataDir%/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
 		, StorageType = "gdal.vect"
 		, StorageReadOnly = "True"
 		, KeepData = "True"

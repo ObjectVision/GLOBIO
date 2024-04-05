@@ -1,14 +1,15 @@
 container Claims
 {
 	unit<uint8> ClaimTable
-	:   StorageName = "%GlobioSourceDataDir%/input/Claim1970.csv" 
+	:   StorageName = '=parameters/final/ClaimFileName' // "%GlobioSourceDataDir%/input/Claim1970.csv"
 	,   StorageType = "gdal.vect"
 	,   StorageReadOnly = "True"
 	{
-		attribute<uint8>     Region;
-		attribute<string>    Class   := Attribute;
-		attribute<units/km2> Claim   := Value[units/km2];
-		attribute<string>    key     := String(Region) + '_' + Class;
+		attribute<uint8>     Region; // /Claims/ClaimTable/Attribute
+		attribute<string>	 Region_str := = 'String(' + parameters/final/ClaimRegionFieldName + ')';
+		attribute<string>    Class   := = parameters/final/ClaimLanduseFieldName;
+		attribute<units/km2> Claim   := = parameters/final/ClaimAreaFieldName + '[units/km2]';
+		attribute<string>    key     := Region_str + '_' + Class;
 	}
 	
 	attribute<float32> scale_factors (SourceData/Regions/regio) := mean(SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);

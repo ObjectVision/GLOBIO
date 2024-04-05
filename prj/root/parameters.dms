@@ -15,6 +15,7 @@ container parameters
 		
 		// regions, initial landuse
 		parameter<string> Regions          	            := "%GlobioSourceDataDir%/input/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif";
+		parameter<string> RegionsMetainfo				:= "%GlobioSourceDataDir%/input/Regions.csv";
 		parameter<string> Landuse		   	     		:= "%GlobioSourceDataDir%/input/ESACCI_GLOBIO_1992_water1992-2015.tif";
 		
 		// restrictions
@@ -27,7 +28,7 @@ container parameters
 		parameter<string> ScenSuitRasterWeights  		:= "0.0|0.0|0.0|0.0|0.0";
 
 		// claims
-		parameter<string> ClaimFileName 		 		:= "ClaimFileName = $InDir;\Claim$ScenarioYear;.csv";
+		parameter<string> ClaimFileName 		 		:= "%GlobioSourceDataDir%/input/Claim1970.csv";
 		parameter<string> ClaimRegionFieldName 	 	    := "Region";
 		parameter<string> ClaimLanduseFieldName  		:= "Attribute";
 		parameter<string> ClaimAreaFieldName 	 		:= "Value";
@@ -58,6 +59,7 @@ container parameters
 		
 		// regions, initial landuse
 		parameter<string> Regions          	            				   := parameters/input/Regions;
+		parameter<string> RegionsMetainfo							       := parameters/input/RegionsMetainfo;
 		parameter<string> Landuse		   	     							   := parameters/input/Landuse;
 		
 		// restrictions
@@ -72,10 +74,10 @@ container parameters
 
 		
 		// claims
-		parameter<string> ClaimFileName 		  := "ClaimFileName = $InDir;\Claim$ScenarioYear;.csv";
-		parameter<string> ClaimRegionFieldName  := "Region";
-		parameter<string> ClaimLanduseFieldName := "Attribute";
-		parameter<string> ClaimAreaFieldName 	  := "Value";
+		parameter<string> ClaimFileName 		:= parameters/input/ClaimFileName;
+		parameter<string> ClaimRegionFieldName  := parameters/input/ClaimRegionFieldName;
+		parameter<string> ClaimLanduseFieldName := parameters/input/ClaimLanduseFieldName;
+		parameter<string> ClaimAreaFieldName 	:= parameters/input/ClaimAreaFieldName;
 		parameter<string> CellAreas             := parameters/input/CellAreas;
 		
 		// cropland intensity adjustment

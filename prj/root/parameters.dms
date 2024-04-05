@@ -46,6 +46,32 @@ container parameters
 		parameter<string> OutRegionLanduseAreasFileName := "$OutDir;\regio_landuse_areas_$CellSizeStr;sec_$ScenarioName;_$ScenarioYear;_$ExtentStr;.csv";
 	}
 	
+	container intermediate
+	{
+		unit<uint8> lu_full_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LanduseCodes, '|')+1))
+		{
+			attribute<uint32> code := uint32(readlines(replace(parameters/input/LanduseCodes, '|', '\n'), ., 0));
+			attribute<string> name := readlines(replace(parameters/input/LanduseNames, '|', '\n'), ., 0);
+		}
+		
+		unit<uint8> lu_prio_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LandusePriorityCodes, '|')+1))
+		{
+			attribute<uint32> code := uint32(readlines(replace(parameters/input/LandusePriorityCodes, '|', '\n'), ., 0));
+			attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
+			attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
+		}
+		
+		unit<uint8> suitabilities_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/SuitRasterCodes, '|')+1))
+		{
+			attribute<uint32>  code     := uint32(readlines(replace(parameters/input/SuitRasterCodes, '|', '\n'), ., 0));
+			attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
+			attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
+			
+			attribute<string>  filename := readlines(replace(parameters/input/SuitRasterNames, '|', '\n'), ., 0);
+			attribute<float32> weights  := float32(readlines(replace(parameters/input/ScenSuitRasterWeights, '|', '\n'), ., 0));
+		}
+	}
+	
 	container final
 	{
 		// scenario parameters
@@ -90,30 +116,6 @@ container parameters
 		parameter<string> OutAllocatedLanduseCropInt 	  := parameters/input/OutAllocatedLanduseCropInt;
 		//parameter<string> OutRegionLanduseAreasFileName := "$OutDir;\regio_landuse_areas_$CellSizeStr;sec_$ScenarioName;_$ScenarioYear;_$ExtentStr;.csv";
 		
-		container intermediate
-		{
-			unit<uint8> lu_full_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LanduseCodes, '|')+1))
-			{
-				attribute<uint32> code := uint32(readlines(replace(parameters/input/LanduseCodes, '|', '\n'), ., 0));
-				attribute<string> name := readlines(replace(parameters/input/LanduseNames, '|', '\n'), ., 0);
-			}
-			
-			unit<uint8> lu_prio_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LandusePriorityCodes, '|')+1))
-			{
-				attribute<uint32> code := uint32(readlines(replace(parameters/input/LandusePriorityCodes, '|', '\n'), ., 0));
-				attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
-				attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
-			}
-			
-			unit<uint8> suitabilities_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/SuitRasterCodes, '|')+1))
-			{
-				attribute<uint32>  code     := uint32(readlines(replace(parameters/input/SuitRasterCodes, '|', '\n'), ., 0));
-				attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
-				attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
-				
-				attribute<string>  filename := readlines(replace(parameters/input/SuitRasterNames, '|', '\n'), ., 0);
-				attribute<float32> weights  := float32(readlines(replace(parameters/input/ScenSuitRasterWeights, '|', '\n'), ., 0));
-			}
-		}
+
 	}
 }

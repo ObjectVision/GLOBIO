@@ -1,4 +1,4 @@
-container Compacted := Templates/MakeCompactedRegion(255b);
+container Compacted := Templates/MakeCompactedRegion(254b);
 
 /*
 

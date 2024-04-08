@@ -8,8 +8,8 @@ container parameters
 		parameter<string> LanduseNames			 	    := "Urban|Cropland|Cropland high intensive|Cropland low intensive|Forestry|Pasture|Rangeland|secondary vegetation|undefined";
 		
 		parameter<string> LandusePriorityCodes   		:= "1|10|30|21|22";
-		parameter<uint32> LanduseReplaceWithCode 		:= 40;
-		parameter<uint32> LanduseUndefinedCode   		:= 0;
+		parameter<uint8> LanduseReplaceWithCode 		:= 40b;
+		parameter<uint8> LanduseUndefinedCode   		:= 0b;
 		//parameter<string> CellSize 				    := "10sec";
 		//parameter<string> CellSizeStr 				:= "10";
 		
@@ -50,20 +50,20 @@ container parameters
 	{
 		unit<uint8> lu_full_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LanduseCodes, '|')+1))
 		{
-			attribute<uint32> code := uint32(readlines(replace(parameters/input/LanduseCodes, '|', '\n'), ., 0));
+			attribute<uint8> code := uint8(readlines(replace(parameters/input/LanduseCodes, '|', '\n'), ., 0));
 			attribute<string> name := readlines(replace(parameters/input/LanduseNames, '|', '\n'), ., 0);
 		}
 		
 		unit<uint8> lu_prio_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/LandusePriorityCodes, '|')+1))
 		{
-			attribute<uint32> code := uint32(readlines(replace(parameters/input/LandusePriorityCodes, '|', '\n'), ., 0));
+			attribute<uint8> code := uint8(readlines(replace(parameters/input/LandusePriorityCodes, '|', '\n'), ., 0));
 			attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
 			attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
 		}
 		
 		unit<uint8> suitabilities_domain := cat_range(uint8, 0b, uint8(strcount(parameters/input/SuitRasterCodes, '|')+1))
 		{
-			attribute<uint32>  code     := uint32(readlines(replace(parameters/input/SuitRasterCodes, '|', '\n'), ., 0));
+			attribute<uint8>  code     := uint8(readlines(replace(parameters/input/SuitRasterCodes, '|', '\n'), ., 0));
 			attribute<intermediate/lu_full_domain> lu_full_rel := rlookup(code, intermediate/lu_full_domain/code);
 			attribute<string> name := intermediate/lu_full_domain/name[lu_full_rel];
 			
@@ -75,13 +75,13 @@ container parameters
 	container final
 	{
 		// scenario parameters
-		parameter<string> ScenarioYear 				                       :=  parameters/input/ScenarioYear;
-		attribute<uint32> LanduseCodes (intermediate/lu_full_domain) 		   := intermediate/lu_full_domain/code;
-		attribute<string> LanduseNames (intermediate/lu_full_domain) 		   := intermediate/lu_full_domain/name;
-		attribute<uint32> LandusePriorityCodes (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/code;
+		parameter<string> ScenarioYear 				                         :=  parameters/input/ScenarioYear;
+		attribute<uint8> LanduseCodes (intermediate/lu_full_domain) 		 := intermediate/lu_full_domain/code;
+		attribute<string> LanduseNames (intermediate/lu_full_domain) 		 := intermediate/lu_full_domain/name;
+		attribute<uint8> LandusePriorityCodes (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/code;
 		attribute<string> LandusePriorityNames (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/name;
-		parameter<uint32> LanduseReplaceWithCode 		                       := parameters/input/LanduseReplaceWithCode;
-		parameter<uint32> LanduseUndefinedCode   							   := parameters/input/LanduseUndefinedCode;
+		parameter<uint8> LanduseReplaceWithCode 		                     := parameters/input/LanduseReplaceWithCode;
+		parameter<uint8> LanduseUndefinedCode   							 := parameters/input/LanduseUndefinedCode;
 		
 		// regions, initial landuse
 		parameter<string> Regions          	            				   := parameters/input/Regions;
@@ -93,11 +93,10 @@ container parameters
 		parameter<string> PAReduceFactor         		:= parameters/input/PAReduceFactor;
 		
 		// suitabilities
-		attribute<uint32> SuitRasterCodes       (intermediate/suitabilities_domain)  := intermediate/suitabilities_domain/code;
+		attribute<uint8> SuitRasterCodes       (intermediate/suitabilities_domain)  := intermediate/suitabilities_domain/code;
 		attribute<string> SuitRasterNames 	  (intermediate/suitabilities_domain)  := intermediate/suitabilities_domain/filename;
 		attribute<string> SuitRasterName (intermediate/suitabilities_domain) := intermediate/suitabilities_domain/name; 
 		attribute<float32> ScenSuitRasterWeights (intermediate/suitabilities_domain) := intermediate/suitabilities_domain/weights;
-
 		
 		// claims
 		parameter<string> ClaimFileName 		:= parameters/input/ClaimFileName;
@@ -107,7 +106,7 @@ container parameters
 		parameter<string> CellAreas             := parameters/input/CellAreas;
 		
 		// cropland intensity adjustment
-		parameter<LandUseType> LandUseCodeCrops 		 := parameters/input/LandUseCodeCrops[LandUseType];
+		parameter<LandUseType> LandUseCodeCrops 		     := parameters/input/LandUseCodeCrops[LandUseType];
 		parameter<LandUseType> LandUseCodeCropsHighIntensive := parameters/input/LandUseCodeCropsHighIntensive[LandUseType];
 		parameter<LandUseType> LandUseCodeCropsLowIntensive  := parameters/input/LandUseCodeCropsLowIntensive[LandUseType];
 		

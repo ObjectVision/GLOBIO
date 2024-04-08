@@ -33,9 +33,10 @@ container Allocation
 			  parameters/final/LandusePriorityNames
 			, 'Templates/AllocateWeightedNthElement(LanduseType/V/' + parameters/final/LandusePriorityNames + ', Compacted/domain,' + states/alloc_state_item  + ', Compacted/SuitabilityMaps/' + parameters/final/LandusePriorityNames + ', Compacted/area, Compacted/regio_rel)'
 		);
-		
-	
-		container allocate_weighted_nth_element
+		attribute<LandUseType> Landuse (compacted/domain) := alloc/rangeland/adjusted_alloc_state;
+		container MakeGrid := Templates/MakeGrid_t(compacted/domain, landuse, 'WeightedNthElement');
+
+		/*container allocate_weighted_nth_element
 		{
 
 			container Urban     := Templates/AllocateWeightedNthElement(LanduseType/V/Urban,     Compacted/domain, Compacted/initial_alloc_state);
@@ -46,7 +47,7 @@ container Allocation
 
 			attribute<LandUseType> Landuse (compacted/domain) := rangeland/adjusted_alloc_state;
 			container MakeGrid := Templates/MakeGrid_t(compacted/domain, landuse, 'WeightedNthElement');
-		}
+		}*/
 
 		/*
 		container allocate_stepwise

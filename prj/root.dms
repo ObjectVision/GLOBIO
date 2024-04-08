@@ -16,7 +16,16 @@ container GLOBIO
 		attribute<String> Name : ['regio'];
 	}
 	
-	unit <uint8> LandUseType: nrofrows = 6
+	unit <uint8> LandUseType := parameters/intermediate/lu_full_domain
+	{
+		attribute<string> name  		   := parameters/final/LanduseNames;
+		attribute<string> name_item_ready  := AsItemName(name);
+		attribute<string> NameWithClaims (parameters/intermediate/lu_prio_domain) := parameters/final/LandusePriorityNames; 
+		attribute<LandUseCode> LanduseCode_rel := parameters/final/LanduseCodes;
+		container V := for_each_nedv(name_item_ready, string(id(.))+'[..]', void, .);
+	}
+ 	
+	unit <uint8> LandUseType_ : nrofrows = 6
 	{
 		attribute<string>  Name:           ['Urban', 'Cropland', 'Pasture', 'RangeLand', 'Forestry', 'other'];
 		attribute<string>  NameWithClaims: ['Urban', 'Cropland', 'Pasture', 'Rangeland', 'Forestry'];

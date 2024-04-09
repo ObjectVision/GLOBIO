@@ -38,3 +38,6 @@ The per region allocation can be written to file using item: **/Allocation/per_r
 ## Spatial aggregation
 
 ## Python
+See [examples/example_01_run_dms_globio_alloc.py](https://github.com/ObjectVision/GLOBIO_dms/blob/main/examples/example_01_run_dms_globio_alloc.py) for how to call the configuration from Python as is, showing only how to change the InDir and OutDir parameters.
+
+See See [examples/example_02_run_dms_globio_alloc_change_param.py](https://github.com/ObjectVision/GLOBIO_dms/blob/main/examples/example_02_run_dms_globio_alloc_change_param.py) for how to call the configuration from Python as is, showing only how to change the InDir and OutDir parameters.

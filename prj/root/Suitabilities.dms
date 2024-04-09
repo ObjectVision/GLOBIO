@@ -11,6 +11,6 @@
 
 container Suitabilities := for_each_nedv(
 		  parameters/final/SuitRasterName
-		, 'SourceData/Suitabilities_dynamic/' + parameters/final/SuitRasterName + '/domain/ReadData'
+		, 'SourceData/Suitabilities/' + parameters/final/SuitRasterName + '/domain/ReadData'
 		, Geography/world_domain
 		, Float32), LazyCalculated = "True";

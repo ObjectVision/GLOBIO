@@ -80,14 +80,14 @@ container SourceData: LazyCalculated = "True"
 		}	
 	}
 	
-	container Suitabilities_dynamic := for_each_ind(
+	container Suitabilities := for_each_ind(
 	  'ne'                                       // options
 	, parameters/final/SuitRasterName
     ,'Templates/ReadSuitabilityData(' + quote(parameters/final/SuitRasterNames) + ')' 		    // name
    );//, LazyCalculated = "True"; 
 
 	
-	container Suitabilities : LazyCalculated = "True"
+	/*container Suitabilities : LazyCalculated = "True"
 	{
 		unit<upoint> Urban
 		:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif"			
@@ -124,5 +124,5 @@ container SourceData: LazyCalculated = "True"
 		   attribute<Float32> GridData;
 		   attribute<Float32> ReadData(grid_domain); 
 		}
-	}
+	}*/
 }

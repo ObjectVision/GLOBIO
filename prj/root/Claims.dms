@@ -1,7 +1,7 @@
 container Claims
 {
 	unit<uint8> ClaimTable
-	:   StorageName = '=parameters/final/ClaimFileName' // "%GlobioSourceDataDir%/input/Claim1970.csv"
+	:   StorageName = '=parameters/final/ClaimFileName'
 	,   StorageType = "gdal.vect"
 	,   StorageReadOnly = "True"
 	{

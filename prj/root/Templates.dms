@@ -26,9 +26,8 @@ container Templates
 		// end case parameters
 		
 		attribute<LandUseCode> LandUseCode_rel (compacted_domain) := landuse->LandUseCode_rel;
-		
 		attribute<LandUseCode> result(Geography/world_domain) := recollect_by_cond(compact_condition, LandUseCode_rel)
-		, StorageName = "='%GlobioSourceDataDir%/output/'+OutputFileName+'.TIF'"
+		, StorageName = "=/parameters/input/OutDir + '/' + OutputFileName + '.TIF'"
 		, StorageType       = "gdalwrite.grid"
 		, DialogData        = "Geography/EPSG_4326";
 	}
@@ -171,7 +170,7 @@ container Templates
 		// end case parameters
 		
 		container compacted_region := MakeCompactedRegion(region);
-		attribute<LanduseType> initial_alloc_state(compacted_region/domain) := compacted_region/initial_alloc_state;// const(LandUseType/V/undefined, compacted_region/domain);
+		attribute<LanduseType> initial_alloc_state(compacted_region/domain) := compacted_region/initial_alloc_state;
 
 		container alloc := for_each_ne (
 		  parameters/final/LandusePriorityNames
@@ -183,8 +182,8 @@ container Templates
 		container Pasture   := Templates/AllocateWeightedNthElement(LanduseType/V/Pasture,   compacted_region/domain, Forestry/adjusted_alloc_state, compacted_region/SuitabilityMaps/Pasture, compacted_region/area, compacted_region/regio_rel);
 		container Rangeland := Templates/AllocateWeightedNthElement(LanduseType/V/Rangeland, compacted_region/domain, Pasture/adjusted_alloc_state, compacted_region/SuitabilityMaps/Rangeland, compacted_region/area, compacted_region/regio_rel);
 		*/
-		
-		attribute<LandUseType> Landuse (compacted_region/domain) := alloc/rangeland/adjusted_alloc_state; // TODO: make dynamic
+		parameter<string> lu_name := parameters/final/LandusePriorityNames[uint8(#parameters/intermediate/lu_prio_domain)-1b];
+		attribute<LandUseType> Landuse (compacted_region/domain) := ='alloc/' + lu_name + '/adjusted_alloc_state'; // TODO: make dynamic
 		container MakeGrid := Templates/MakeGrid_t(compacted_region/compact_condition , compacted_region/domain, landuse, 'WeightedNthElement');
 	}
 }

@@ -2,15 +2,13 @@ container GLOBIO
 {
 	container ConfigSettings { 
 		container Overridable { 
-			parameter<String> GlobioSourceDataDir:= '%SourceDataDir%/GLOBIO'; 
+			parameter<String> GlobioSourceDataDir:= '%SourceDataDir%/GLOBIO/input'; 
 		}
 	}
 
 	#include <parameters.dms>
 	#include <units.dms>
-	
 
-	
 	unit <uint8> partitioning: nrofrows = 1
 	{
 		attribute<String> Name : ['regio'];

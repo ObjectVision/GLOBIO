@@ -29,5 +29,11 @@ This repository provides GLOBIO functionality using GeoDMS for **landuse allocat
 </details>
 
 ## Landuse allocation
+Landuse allocation in this project can either be calculated per region or for the world in one go. The algorithm goes over landuse types in the parameter: LandusePriorityCodes order, sorts the suitability map in descending order, aggregates the per cell area up to the claim and assigns these cells to the claimed landuse.
+ 
+The world allocation can be written to file using item: **/Allocation/world/MakeGrid/RESULT**
+The per region allocation can be written to file using item: **/Allocation/per_region/Western_Europe/MakeGrid/RESULT**
 
 ## Spatial aggregation
+
+## Python

@@ -33,7 +33,7 @@ Landuse allocation in this project can either be calculated per region or for th
  
 The world allocation can be written to file using item: **/Allocation/world/MakeGrid/RESULT**
 
-The per region allocation can be written to file using item: **/Allocation/per_region/Western_Europe/MakeGrid/RESULT**
+The per region allocation can be written to file using for instance Western-Europe item: **/Allocation/per_region/Western_Europe/MakeGrid/RESULT**
 
 ## Spatial aggregation
 

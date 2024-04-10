@@ -34,7 +34,7 @@ container Allocation
 			, 'Templates/AllocateWeightedNthElement(LanduseType/V/' + parameters/final/LandusePriorityNames + ', Compacted/domain,' + states/alloc_state_item  + ', Compacted/SuitabilityMaps/' + parameters/final/LandusePriorityNames + ', Compacted/area, Compacted/regio_rel)'
 		);
 		attribute<LandUseType> Landuse (compacted/domain) := alloc/rangeland/adjusted_alloc_state;
-		container MakeGrid := Templates/MakeGrid_t(compacted/domain, landuse, 'WeightedNthElement');
+		container MakeGrid := Templates/MakeGrid_t(compacted/compact_condition, compacted/domain, landuse, 'WeightedNthElement');
 
 		/*container allocate_weighted_nth_element
 		{

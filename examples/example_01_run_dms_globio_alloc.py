@@ -6,21 +6,17 @@ Erik Oudejans ( Object Vision BV) - 04-2024
 """
 
 import sys
-
 sys.path.append('C:/Users/Cicada/dev/geodms/branches/geodms_python/bin/Release/x64') # python version 3.12.2
-
 from geodms import *
 
 def set_GLOBIO_input_dir(root, InDir:str):
     in_dir = root.find("/parameters/input/InDir")
-    mutable_in_dir = in_dir.as_mutable()
-    mutable_in_dir.set_expr(f'"{InDir}"')
+    in_dir.set_expr(f'"{InDir}"')
     return
 
 def set_GLOBIO_output_dir(root, OutDir:str):
     out_dir = root.find("/parameters/input/OutDir")
-    mutable_out_dir = out_dir.as_mutable()
-    mutable_out_dir.set_expr(f'"{OutDir}"')
+    out_dir.set_expr(f'"{OutDir}"')
     return
 
 def run():
@@ -39,7 +35,6 @@ def run():
 
         print(param_LandusePriorityCodes.expr())
         print(param_LandusePriorityCodes.name())
-        print(id(root))
 
         # set in- and output directories
         set_GLOBIO_input_dir(root, "D:/SourceData/GLOBIO/input")

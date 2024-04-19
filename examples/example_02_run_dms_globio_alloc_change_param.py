@@ -14,14 +14,12 @@ from geodms import *
 
 def set_GLOBIO_input_dir(root, InDir:str):
     in_dir = root.find("/parameters/input/InDir")
-    mutable_in_dir = in_dir.as_mutable()
-    mutable_in_dir.set_expr(f'"{InDir}"')
+    in_dir.set_expr(f'"{InDir}"')
     return
 
 def set_GLOBIO_output_dir(root, OutDir:str):
     out_dir = root.find("/parameters/input/OutDir")
-    mutable_out_dir = out_dir.as_mutable()
-    mutable_out_dir.set_expr(f'"{OutDir}"')
+    out_dir.set_expr(f'"{OutDir}"')
     return
 
 def run():
@@ -48,8 +46,7 @@ def run():
             return
 
         # change expr
-        mutable_param_LandusePriorityCodes = param_LandusePriorityCodes.as_mutable()
-        mutable_param_LandusePriorityCodes.set_expr('"1|10|30|21|22"')
+        param_LandusePriorityCodes.set_expr('"1|10|30|21|22"')
 
         # get example output: Western-Europe
         example_output = root.find("/Allocation/per_region/Western_Europe/MakeGrid/result")

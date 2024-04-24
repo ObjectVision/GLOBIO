@@ -20,6 +20,7 @@ def set_GLOBIO_output_dir(root, OutDir:str):
     return
 
 def run():
+    target_item = "/Allocation/per_region/Western_Europe/MakeGrid/result"
     try:
         dms_engine = Engine()
         dms_config = dms_engine.load_config('../prj/root.dms')
@@ -41,8 +42,10 @@ def run():
         set_GLOBIO_output_dir(root, "D:/SourceData/GLOBIO/new_output")
 
         # get example output: Western-Europe
-        example_output = root.find("/Allocation/per_region/Western_Europe/MakeGrid/result")
-
+        example_output = root.find(target_item)
+        if example_output.is_null():
+            raise Exception(f"Cannot find output item: {target_item}")
+        
         example_output.update()
 
     except Exception as e:

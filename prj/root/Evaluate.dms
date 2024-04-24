@@ -3,7 +3,7 @@ container Evaluate
 	container reference
 	{
 		unit<upoint> python_world
-		: StorageName = "%GlobioSourceDataDir%/output/world/Globio4_landuse_10sec_1970_World_filled.tif" 
+		: StorageName = '=parameters/final/OutDir + "/world/Globio4_landuse_10sec_1970_World_filled.tif"'
 		, StorageType = "gdal.grid"
 		, DialogData        = "Geography/EPSG_4326"
 		, StorageReadOnly = "True"
@@ -21,7 +21,7 @@ container Evaluate
 	container geodms_result
 	{
 		unit<upoint> dms_world := grid_domain
-		, StorageName = "%GlobioSourceDataDir%/output/WeightedNthElement.tif" 
+		, StorageName = '=parameters/final/OutDir +"/WeightedNthElement.tif"'
 		, StorageType = "gdal.grid"
 		, DialogData        = "Geography/EPSG_4326"
 		, StorageReadOnly = "True"
@@ -42,7 +42,7 @@ container Evaluate
 	container indicators 
 	{
 		unit<uint8> Urban := SourceData/Regions/regio
-			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_urban.csv" 
+			, StorageName = '=parameters/final/OutDir + "/alloc_differences_urban.csv"'
 			, StorageType = "gdalwrite.vect"
 			, StorageReadOnly = "False"
 		{
@@ -55,7 +55,7 @@ container Evaluate
 		}
 		
 		unit<uint8> Cropland := SourceData/Regions/regio
-			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_cropland.csv" 
+			, StorageName = '=parameters/final/OutDir +"/alloc_differences_cropland.csv"' 
 			, StorageType = "gdalwrite.vect"
 			, StorageReadOnly = "False"
 		{
@@ -66,7 +66,7 @@ container Evaluate
 		}
 		
 		unit<uint8> Forestry := SourceData/Regions/regio
-			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_forestry.csv" 
+			, StorageName = '=parameters/final/OutDir +"/alloc_differences_forestry.csv"' 
 			, StorageType = "gdalwrite.vect"
 			, StorageReadOnly = "False"
 		{
@@ -77,7 +77,7 @@ container Evaluate
 		}
 		
 		unit<uint8> Pasture := SourceData/Regions/regio
-			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_pasture.csv" 
+			, StorageName = '=parameters/final/OutDir +"/alloc_differences_pasture.csv"'
 			, StorageType = "gdalwrite.vect"
 			, StorageReadOnly = "False"
 		{
@@ -88,7 +88,7 @@ container Evaluate
 		}
 		
 		unit<uint8> Rangeland := SourceData/Regions/regio
-			, StorageName = "%GlobioSourceDataDir%/output/alloc_differences_rangeland.csv" 
+			, StorageName = '=parameters/final/OutDir +"/alloc_differences_rangeland.csv"'
 			, StorageType = "gdalwrite.vect"
 			, StorageReadOnly = "False"
 		{

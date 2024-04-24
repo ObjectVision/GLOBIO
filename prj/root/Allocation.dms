@@ -16,14 +16,7 @@ container Allocation
 	(
 		  SourceData/Regions/regio/name
 		, 'Templates/AllocateNthElementWeightedPerRegion(uint8(' + SourceData/Regions/regio/Nr + '))'
-	)
-	{
-		/*container merge_compacted
-		{
-			attribute<LandUseType> first_merge (compacted/domain) := Allocation/per_region/Canada/Landuse[invert(Allocation/per_region/Canada/compacted_region/compacted_world_rel)];
-			attribute<LanduseType> second_merge (compacted/domain) := MakeDefined(Allocation/per_region/USA/Landuse[invert(Allocation/per_region/USA/compacted_region/compacted_world_rel)], first_merge);
-		}*/
-	}
+	);
 	
 	container world
 	{

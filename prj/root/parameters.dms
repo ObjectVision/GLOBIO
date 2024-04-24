@@ -3,6 +3,7 @@ container parameters
 	container input
 	{
 		// directories
+		//REMOVE syntax error 
 		parameter<string> InDir  := ConfigSettings/Overridable/GlobioSourceDataDir;
 		parameter<string> OutDir := "%SourceDataDir%/GLOBIO/output";
 	
@@ -19,25 +20,25 @@ container parameters
 		//parameter<string> CellSizeStr 				:= "10";
 		
 		// regions, initial landuse
-		parameter<string> Regions          	            := "%GlobioSourceDataDir%/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif";
-		parameter<string> RegionsMetainfo				:= "%GlobioSourceDataDir%/Regions.csv";
-		parameter<string> Landuse		   	     		:= "%GlobioSourceDataDir%/ESACCI_GLOBIO_1992_water1992-2015.tif";
+		parameter<string> Regions          	            := parameters/final/InDir + "/ESA_IMAGEregions_10sec_no_water_GLOBIO41cz.tif";
+		parameter<string> RegionsMetainfo				:= parameters/final/InDir + "/Regions.csv";
+		parameter<string> Landuse		   	     		:= parameters/final/InDir + "/ESACCI_GLOBIO_1992_water1992-2015.tif";
 		
 		// restrictions
-		parameter<string> NotAllocatableAreas    		:= "%GlobioSourceDataDir%/not_allocatable_ESA-CCI_1992-2015.tif";
-		parameter<string> PAReduceFactor         		:= "%GlobioSourceDataDir%/pa_reduce_factor_wdpa_2018_july.tif"; // for example protected areas
+		parameter<string> NotAllocatableAreas    		:= parameters/final/InDir + "/not_allocatable_ESA-CCI_1992-2015.tif";
+		parameter<string> PAReduceFactor         		:= parameters/final/InDir + "/pa_reduce_factor_wdpa_2018_july.tif"; // for example protected areas
 		
 		// suitabilities
 		parameter<string> SuitRasterCodes 		        := "1|10|21|22|30";
-		parameter<string> SuitRasterNames        		:= "%GlobioSourceDataDir%/suit_urban.tif|%GlobioSourceDataDir%/suit_crop_lu_diff_no_wtr_ice_0.tif|%GlobioSourceDataDir%/suit_pasture_lu_diff_no_wtr.tif|%GlobioSourceDataDir%/suit_pasture_lu_diff_no_wtr.tif|%GlobioSourceDataDir%/suit_forestry_2015.tif";
+		parameter<string> SuitRasterNames        		:= parameters/final/InDir + "/suit_urban.tif|" + parameters/final/InDir + "/suit_crop_lu_diff_no_wtr_ice_0.tif|" + parameters/final/InDir + "/suit_pasture_lu_diff_no_wtr.tif|" + parameters/final/InDir + "/suit_pasture_lu_diff_no_wtr.tif|" + parameters/final/InDir + "/suit_forestry_2015.tif";
 		parameter<string> ScenSuitRasterWeights  		:= "0.0|0.0|0.0|0.0|0.0";
 
 		// claims
-		parameter<string> ClaimFileName 		 		:= "%GlobioSourceDataDir%/Claim1970.csv";
+		parameter<string> ClaimFileName 		 		:= parameters/final/InDir + "/Claim1970.csv";
 		parameter<string> ClaimRegionFieldName 	 	    := "Region";
 		parameter<string> ClaimLanduseFieldName  		:= "Attribute";
 		parameter<string> ClaimAreaFieldName 	 		:= "Value";
-		parameter<string> CellAreas                     := "%GlobioSourceDataDir%/areakm2_10sec.tif";
+		parameter<string> CellAreas                     := parameters/final/InDir + "/areakm2_10sec.tif";
 		
 		  
 		// cropland intensity adjustment
@@ -79,11 +80,14 @@ container parameters
 	
 	container final
 	{
+		// input filenames
+		parameter<string> InDir := parameters/input/InDir;
+		
 		// scenario parameters
-		parameter<string> ScenarioYear 				                         :=  parameters/input/ScenarioYear;
+		parameter<string> ScenarioYear 				                         := parameters/input/ScenarioYear;
 		attribute<uint8> LanduseCodes (intermediate/lu_full_domain) 		 := intermediate/lu_full_domain/code;
 		attribute<string> LanduseNames (intermediate/lu_full_domain) 		 := intermediate/lu_full_domain/name;
-		attribute<uint8> LandusePriorityCodes (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/code;
+		attribute<uint8> LandusePriorityCodes (intermediate/lu_prio_domain)  := intermediate/lu_prio_domain/code;
 		attribute<string> LandusePriorityNames (intermediate/lu_prio_domain) := intermediate/lu_prio_domain/name;
 		parameter<uint8> LanduseReplaceWithCode 		                     := parameters/input/LanduseReplaceWithCode;
 		parameter<uint8> LanduseUndefinedCode   							 := parameters/input/LanduseUndefinedCode;

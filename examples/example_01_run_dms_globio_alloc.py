@@ -6,7 +6,7 @@ Erik Oudejans ( Object Vision BV) - 04-2024
 """
 
 import sys
-sys.path.append('C:/Users/Cicada/dev/geodms/branches/geodms_python/bin/Release/x64') # python version 3.12.2
+sys.path.append('path/to/dms/installation/') # python version 3.12.2
 from geodms import *
 
 def set_GLOBIO_input_dir(root, InDir:str):

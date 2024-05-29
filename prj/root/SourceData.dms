@@ -4,7 +4,7 @@ container SourceData: LazyCalculated = "True"
 	{
 		unit<upoint> ESA_CCI
 		:   StorageName = '=parameters/final/Landuse'
-		,   StorageType = "gdal.grid" 
+		//,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		,   StorageReadOnly = "True"
 		{    
@@ -14,7 +14,7 @@ container SourceData: LazyCalculated = "True"
 	
 	unit<upoint> Area
 	: 	StorageName = "=parameters/final/CellAreas" 
-	,   StorageType = "gdal.grid" 
+	//,   StorageType = "gdal.grid" 
 	,   DialogData  = "Geography/EPSG_4326" 
 	,   StorageReadOnly = "True"
 	{
@@ -24,7 +24,8 @@ container SourceData: LazyCalculated = "True"
 	
 	unit<upoint> NotAllocatable
 	:   StorageName = '=parameters/final/NotAllocatableAreas'
-	,   DialogData  = "Geography/EPSG_4326" 
+	,   DialogData  = "Geography/EPSG_4326"
+	,   StorageReadOnly = "True"
 	{    
 	   attribute<Bool> GridData;
 	   attribute<Bool> ReadData(grid_domain); 
@@ -32,7 +33,7 @@ container SourceData: LazyCalculated = "True"
 	
 	unit<upoint> UsageReductionFactor
 	: 	StorageName = '=parameters/final/PAReduceFactor'
-	,   StorageType = "gdal.grid" 
+	//,   StorageType = "gdal.grid" 
 	,   DialogData  = "Geography/EPSG_4326" 
 	,   StorageReadOnly = "True"
 	{
@@ -44,7 +45,7 @@ container SourceData: LazyCalculated = "True"
 	{
 		unit<upoint> IMAGE
 		:   StorageName = '=parameters/final/Regions'
-		,   StorageType = "gdal.grid" 
+		//,   StorageType = "gdal.grid" 
 		,   DialogData  = "Geography/EPSG_4326" 
 		,   StorageReadOnly = "True"
 		{    
@@ -53,8 +54,28 @@ container SourceData: LazyCalculated = "True"
 		}
 		
 		parameter<string> underscore := '_';
+		container regio_raw := Templates/TableChopper(parameters/final/RegionsMetainfo, ";");
+		unit<uint8> regio := regio_raw/domain {
+			attribute<string>    keyString     := string(id(.));
+			container keyLandUseType := for_each_nedv(
+				LandUseType/NameWithClaims 
+				, 'keyString + underscore +' + quote(LandUseType/NameWithClaims)
+				, regio
+				, string
+				);
+			
+			container AreaClaims := for_each_nedv(
+				LandUseType/NameWithClaims 
+				,'rjoin(keyLandUseType/' + LandUseType/NameWithClaims + ', Claims/ClaimTable/key, Claims/ClaimTable/Claim)'
+				, regio
+				, units/km2
+			);
+			attribute<string> Label := regio_raw/data/Countries, DialogType = "LabelText";
+			attribute<string> name := AsItemName(regio_raw/data/Region); // sanitized for item naming
+			attribute<string> Nr := regio_raw/data/Nr;
+		}
 		
-		unit<uint8> regio
+		/*unit<uint8> regio
 		: StorageName = "= parameters/final/RegionsMetainfo" //%GlobioSourceDataDir%/input/Regions.csv" // https://models.pbl.nl/image/index.php/Region_classification_map
 		, StorageType = "gdal.vect"
 		, StorageReadOnly = "True"
@@ -77,52 +98,12 @@ container SourceData: LazyCalculated = "True"
 			);
 			attribute<string> Label := Countries, DialogType = "LabelText";
 			attribute<string> name := AsItemName(Region); // sanitized for item naming
-		}	
+		}*/
 	}
 	
 	container Suitabilities := for_each_ind(
 	  'ne'                                       // options
 	, parameters/final/SuitRasterName
     ,'Templates/ReadSuitabilityData(' + quote(parameters/final/SuitRasterNames) + ')' 		    // name
-   );//, LazyCalculated = "True"; 
-
-	
-	/*container Suitabilities : LazyCalculated = "True"
-	{
-		unit<upoint> Urban
-		:   StorageName = "%GlobioSourceDataDir%/input/suit_urban.tif"			
-		,   StorageType = "gdal.grid" 
-		,   DialogData  = "Geography/EPSG_4326" 
-		{    
-		   attribute<Float32> GridData;
-		   attribute<Float32> ReadData(grid_domain); 
-		}
-		
-		unit<upoint> Pasture
-		:   StorageName = "%GlobioSourceDataDir%/input/suit_pasture_lu_diff_no_wtr.tif" 
-		,   StorageType = "gdal.grid" 
-		,   DialogData  = "Geography/EPSG_4326" 
-		{    
-		   attribute<Float32> GridData;
-		   attribute<Float32> ReadData(grid_domain); 
-		}
-		
-		unit<upoint> Cropland
-		:   StorageName = "%GlobioSourceDataDir%/input/suit_crop_lu_diff_no_wtr_ice_0.tif" 
-		,   StorageType = "gdal.grid" 
-		,   DialogData  = "Geography/EPSG_4326" 
-		{    
-		   attribute<Float32> GridData;
-		   attribute<Float32> ReadData(grid_domain); 
-		}
-		
-		unit<upoint> Forestry
-		:   StorageName = "%GlobioSourceDataDir%/input/suit_forestry_2015.tif"
-		,   StorageType = "gdal.grid" 
-		,   DialogData  = "Geography/EPSG_4326" 
-		{    
-		   attribute<Float32> GridData;
-		   attribute<Float32> ReadData(grid_domain); 
-		}
-	}*/
+   );
 }

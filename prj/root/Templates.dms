@@ -1,23 +1,47 @@
-container Templates
-{
-	Template ReadSuitabilityData
-	{
+container Templates {
+	Template TableChopper {
+		// begin case parameters
+		parameter<string>  filename;
+		parameter<string>  fieldseparator;
+		// end case parameters
+
+		parameter<string> filedata : StorageType = "str", StorageName = "=filename";	
+		parameter<string> headerline := readLines(filedata, void, 0);
+		
+		unit<uint32>field := Range(uint32, 0, strcount(headerline, fieldseparator) + 1) {
+			attribute<string> name := ReadArray(headerline , field, string, 0);
+			attribute<string> startpos := id(field)>0 ? name[uint32(int32(id(field))-1i)] + "/ReadPos" : string(0/0);
+		}
+
+		parameter<uint8> number_of_rows := uint8(strcount(filedata, "\n")); // assuming last line has no \n
+		unit<uint8> domain := range(0b,number_of_rows);
+	    attribute<string> bodylines (domain) := readLines(filedata, domain, headerline/ReadPos);
+		
+	    container data := for_each_nedv(
+			field/name
+			,'ReadElems(BodyLines,string,' + MakeDefined(field/startpos, 'const(0, domain)') + ',16)'
+			,domain
+			,string
+		);
+		    //'ReadElems(BodyLines,string,'+ field/name[id(field)-1] + '/ReadPos','const(0, domain))'
+	}
+
+	Template ReadSuitabilityData {
 		// begin case parameters
 		parameter<string> suitability_filename;
 		// end case parameters
 		
 		unit<upoint> domain
 		:   StorageName = '=suitability_filename'
-		,   StorageType = "gdal.grid" 
+		,   StorageType = "tif" 
 		,   DialogData  = "Geography/EPSG_4326" 
-		{    
+		,   StorageReadOnly = "True" {    
 		   attribute<Float32> GridData;
 		   attribute<Float32> ReadData(grid_domain); 
 		}
 	}
 	
-	Template MakeGrid_t 
-	{
+	Template MakeGrid_t {
 		// begin case parameters
 		attribute<Bool> compact_condition(Geography/world_domain);
 		unit<uint32> compacted_domain;
@@ -28,12 +52,11 @@ container Templates
 		attribute<LandUseCode> LandUseCode_rel (compacted_domain) := landuse->LandUseCode_rel;
 		attribute<LandUseCode> result(Geography/world_domain) := recollect_by_cond(compact_condition, LandUseCode_rel)
 		, StorageName = "=/parameters/input/OutDir + '/' + OutputFileName + '.TIF'"
-		, StorageType       = "gdalwrite.grid"
+		, StorageType       = "tif" //"gdalwrite.grid"
 		, DialogData        = "Geography/EPSG_4326";
 	}
 	
-	Template SteppedAllocateLanduse
-	{
+	Template SteppedAllocateLanduse {
 		// begin case parameters
 		parameter<LanduseType>  CurrLanduseType_rel;
 		attribute<LanduseType>  org_alloc_state(domain);
@@ -46,14 +69,12 @@ container Templates
 		attribute<int32> OrgSuitabilityMap(domain) := = 'Compacted/SuitabilityMaps/' + landuse_name;
 		attribute<int32> SuitabilityMap(domain) := suitability_augmentation_mask ? OrgSuitabilityMap : -1i, LazyCalculated = "True";
 		
-		container SuitabilityMaps
-		{
+		container SuitabilityMaps {
 			attribute<int32> alloc(domain) := SuitabilityMap;
 			attribute<int32> other(domain) := const(0i, domain);
 		}
 		
-		container SteppedClaims
-		{
+		container SteppedClaims {
 			Attribute<UInt32> alloc (SourceData/Regions/regio) :== 'Claims/Scaled/' + landuse_name;
 			Attribute<UInt32> other (SourceData/Regions/regio) := const(0, SourceData/Regions/regio);
 		}
@@ -68,10 +89,7 @@ container Templates
 			,SteppedClaims ,SteppedClaims
 			,0i
 			,FeasibleSolution
-		)
-		{
-			
-		}
+		) {}
 
 		attribute<bool>  allocate(domain) := (allocate_step/landuse==0b), LazyCalculated = "True";
 		attribute<LanduseType> adjusted_alloc_state(domain) := allocate ? CurrLanduseType_rel : org_alloc_state, LazyCalculated = "True";
@@ -81,8 +99,7 @@ container Templates
 		attribute<float32> area_per_regio (SourceData/Regions/regio) := sum(area_allocated, Compacted/regio_rel);
 	}
 	
-	Template MakeCompactedRegion
-	{
+	Template MakeCompactedRegion {
 		// begin case parameters
 		parameter<uint8> region; // 254 for all regions
 		// end case parameters
@@ -90,8 +107,7 @@ container Templates
 		parameter<string> region_name := /SourceData/Regions/regio/Label[region];
 		
 		attribute<Bool> compact_condition(Geography/world_domain) := and(not(SourceData/NotAllocatable/ReadData), region==254b ? True : SourceData/Regions/IMAGE/ReadData==region);
-		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid"
-		{
+		unit<uint32> domain := select_uint32(compact_condition), DialogType = "Map", DialogData = "BaseGrid" {
 			attribute<int64> ordinal(.) := collect_by_cond(domain, compact_condition, Geography/world_domain/ordinal);
 		}
 		
@@ -119,8 +135,7 @@ container Templates
 		, 'int32(collect_by_cond(domain, compact_condition, Suitabilities/' + parameters/final/SuitRasterName + ')    * UsageReductionFactor * SuitStepFactor) + plateau_augmentation_factor'
 		, domain
 		, int32
-		)
-		{
+		) {
 			attribute<Float32> Undefined(domain) := const(0f, domain);
 		}
 		
@@ -130,8 +145,7 @@ container Templates
 		attribute<LandUseType> initial_alloc_state(domain) := = use_zeroed_initial_alloc_grid ? 'const(LandUseType/V/Undefined, domain)' : 'CurrentLandUseCode->LandUseType_rel';
 	}
 	
-	Template AllocateWeightedNthElement
-	{
+	Template AllocateWeightedNthElement {
 		// begin case parameters
 		parameter<LanduseType> 				CurrLanduseType_rel;
 		unit<uint32> 		   				compacted_domain;
@@ -163,8 +177,7 @@ container Templates
 		attribute<float32> area_per_regio (SourceData/Regions/regio) := sum(area_allocated, regio_rel);
 	}
 	
-	Template AllocateNthElementWeightedPerRegion
-	{
+	Template AllocateNthElementWeightedPerRegion {
 		// begin case parameters
 		parameter<uint8> region;
 		// end case parameters

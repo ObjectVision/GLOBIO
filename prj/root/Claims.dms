@@ -1,16 +1,27 @@
 container Claims
 {
-	unit<uint8> ClaimTable
+	container ClaimTableRaw := Templates/TableChopper(parameters/final/ClaimFileName, ";");
+	
+	unit<uint8> ClaimTable := ClaimtableRaw/domain {
+		attribute<uint8>  Region := uint8(ClaimtableRaw/data/Region);
+		attribute<string> Attribute := ClaimtableRaw/data/Attribute;
+		attribute<string> Value := ClaimtableRaw/data/Value;
+		attribute<string> Region_str := = 'String(' + parameters/final/ClaimRegionFieldName + ')';
+		attribute<string>    Class   := = parameters/final/ClaimLanduseFieldName;
+		attribute<units/km2> Claim   := = parameters/final/ClaimAreaFieldName + '[units/km2]';
+		attribute<string>    key     := Region_str + '_' + Class;
+	}
+	
+	/*unit<uint8> ClaimTable_gdal
 	:   StorageName = '=parameters/final/ClaimFileName'
 	,   StorageType = "gdal.vect"
-	,   StorageReadOnly = "True"
-	{
+	,   StorageReadOnly = "True" {
 		attribute<uint8>     Region; // /Claims/ClaimTable/Attribute
 		attribute<string>	 Region_str := = 'String(' + parameters/final/ClaimRegionFieldName + ')';
 		attribute<string>    Class   := = parameters/final/ClaimLanduseFieldName;
 		attribute<units/km2> Claim   := = parameters/final/ClaimAreaFieldName + '[units/km2]';
 		attribute<string>    key     := Region_str + '_' + Class;
-	}
+	}*/
 	
 	attribute<float32> scale_factors (SourceData/Regions/regio) := mean(SourceData/area/ReadData, SourceData/Regions/IMAGE/ReadData);
 	
